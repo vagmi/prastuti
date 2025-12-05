@@ -1,9 +1,48 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Stage, Layer, Rect, Text as KonvaText } from 'react-konva';
+import { Stage, Layer, Rect, Text as KonvaText, Image as KonvaImage } from 'react-konva';
+import useImage from 'use-image';
 import { useEditorStore } from '../../store';
+import { resolveAssetUrl } from '../../services/assetService';
 import { ElementType } from '../../types';
 import { X, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+
+// Helper component to render image elements
+function ImageElement({ element }: { element: any }) {
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadSrc = async () => {
+      let src = element.src;
+
+      // Resolve asset:// URLs through the asset service
+      if (src.startsWith('asset://')) {
+        const dataUrl = await resolveAssetUrl(src);
+        src = dataUrl || src;
+      }
+
+      setResolvedSrc(src);
+    };
+
+    loadSrc();
+  }, [element.src]);
+
+  const [image] = useImage(resolvedSrc || '', 'anonymous');
+
+  if (!image) return null;
+
+  return (
+    <KonvaImage
+      image={image}
+      x={element.x}
+      y={element.y}
+      width={element.width}
+      height={element.height}
+      rotation={element.rotation}
+      opacity={element.opacity}
+    />
+  );
+}
 
 interface SlideShowProps {
   onClose: () => void;
@@ -116,7 +155,7 @@ export default function SlideShow({ onClose }: SlideShowProps) {
 
   // Auto-hide controls
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
+    let timeout: ReturnType<typeof setTimeout>;
 
     const handleMouseMove = () => {
       setShowControls(true);
@@ -224,6 +263,8 @@ export default function SlideShow({ onClose }: SlideShowProps) {
               switch (element.type) {
                 case ElementType.Text:
                   return renderTextElement(element);
+                case ElementType.Image:
+                  return <ImageElement key={element.id} element={element} />;
                 default:
                   return null;
               }

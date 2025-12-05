@@ -1,6 +1,7 @@
 import { useEditorStore } from '../../store';
 import { ElementType, PanelType } from '../../types';
 import TextPanel from '../panels/TextPanel';
+import ImagePanel from '../panels/ImagePanel';
 import TextPropertiesPanel from '../panels/TextPropertiesPanel';
 import ElementPropertiesPanel from '../panels/ElementPropertiesPanel';
 import SlidePropertiesPanel from '../panels/SlidePropertiesPanel';
@@ -60,9 +61,7 @@ export default function RightSidebar() {
         return (
           <>
             <h2 className="mb-4 text-lg font-semibold text-gray-800">Image</h2>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <p className="text-sm text-gray-600">Image tools coming soon</p>
-            </div>
+            <ImagePanel />
           </>
         );
 

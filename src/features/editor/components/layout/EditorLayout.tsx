@@ -6,15 +6,15 @@ import SlideNavigator from '../slides/SlideNavigator';
 import SlideCanvas from '../canvas/SlideCanvas';
 import SlideShow from '../slideshow/SlideShow';
 import {
-  openPresentationDialog,
-  savePresentationDialog,
   savePresentation,
-} from '../../api/fileOperations';
+  loadPresentation,
+} from '../../services/presentationService';
+import { setCurrentPresentationPath } from '../../services/assetService';
 import { Play } from 'lucide-react';
 
 export default function EditorLayout() {
   const createPresentation = useEditorStore((s) => s.createPresentation);
-  const loadPresentation = useEditorStore((s) => s.loadPresentation);
+  const loadPresentationIntoStore = useEditorStore((s) => s.loadPresentation);
   const updatePresentationName = useEditorStore((s) => s.updatePresentationName);
   const presentation = useEditorStore((s) => s.presentation);
   const [isSaving, setIsSaving] = useState(false);
@@ -36,6 +36,13 @@ export default function EditorLayout() {
     }
   }, [presentation, createPresentation]);
 
+  // Ensure presentation path is set when component mounts with existing path
+  useEffect(() => {
+    if (lastSavedPath) {
+      setCurrentPresentationPath(lastSavedPath);
+    }
+  }, [lastSavedPath]);
+
   // Autosave every 5 seconds
   useEffect(() => {
     if (!presentation || !lastSavedPath) return;
@@ -44,7 +51,7 @@ export default function EditorLayout() {
       // Only save if there are changes
       if (lastUpdatedAtRef.current !== presentation.updatedAt) {
         try {
-          await savePresentation(presentation, [], lastSavedPath);
+          await savePresentation(presentation, { filePath: lastSavedPath });
           setLastSavedTime(Date.now());
           lastUpdatedAtRef.current = presentation.updatedAt;
           console.log('Auto-saved at', new Date().toLocaleTimeString());
@@ -62,12 +69,13 @@ export default function EditorLayout() {
 
     setIsSaving(true);
     try {
-      const result = await savePresentationDialog(presentation, []);
-      if (result) {
-        setLastSavedPath(result.filePath);
+      const filePath = await savePresentation(presentation);
+      if (filePath) {
+        setLastSavedPath(filePath);
+        setCurrentPresentationPath(filePath);
         setLastSavedTime(Date.now());
         lastUpdatedAtRef.current = presentation.updatedAt;
-        console.log('Presentation saved successfully to:', result.filePath);
+        console.log('Presentation saved successfully to:', filePath);
       }
     } catch (error) {
       console.error('Failed to save presentation:', error);
@@ -80,10 +88,18 @@ export default function EditorLayout() {
   const handleOpen = async () => {
     setIsOpening(true);
     try {
-      const result = await openPresentationDialog();
+      const result = await loadPresentation();
       if (result) {
-        loadPresentation(result.presentation);
+        // IMPORTANT: Set the presentation path FIRST, before loading into store
+        // This ensures the asset service knows where to load images from
+        // when components try to render them
         setLastSavedPath(result.filePath);
+        setCurrentPresentationPath(result.filePath);
+
+        // Now load the presentation data into the store
+        // Images will be able to resolve their assets correctly
+        loadPresentationIntoStore(result.presentation);
+
         setLastSavedTime(Date.now());
         lastUpdatedAtRef.current = result.presentation.updatedAt;
         console.log('Presentation loaded successfully from:', result.filePath);

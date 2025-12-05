@@ -21,6 +21,7 @@
     "react-dom": "^19.1.0",
     "react-konva": "^19.2.1",
     "react-motion": "^0.5.2",
+    "use-image": "^1.1.4",
     "uuid": "^13.0.0",
     "zustand": "^5.0.9"
   },

@@ -108,6 +108,12 @@ pub fn save_presentation(
         // Write assets
         for asset in assets {
             let asset_path = assets_dir.join(&asset.name);
+
+            // Create parent directories if needed (e.g., for "images/file.png")
+            if let Some(parent) = asset_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+
             fs::write(asset_path, &asset.data)?;
         }
     }
@@ -176,22 +182,11 @@ pub fn load_presentation(input_path: &Path) -> io::Result<(Presentation, Vec<Ass
         slides.insert(slide_id.clone(), slide);
     }
 
-    // Read assets
+    // Read assets recursively
     let mut assets = Vec::new();
     let assets_dir = temp_dir.join("assets");
     if assets_dir.exists() {
-        for entry in fs::read_dir(assets_dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() {
-                let name = path.file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("unknown")
-                    .to_string();
-                let data = fs::read(&path)?;
-                assets.push(Asset { name, data });
-            }
-        }
+        read_assets_recursively(&assets_dir, &assets_dir, &mut assets)?;
     }
 
     // Construct Presentation object
@@ -209,6 +204,37 @@ pub fn load_presentation(input_path: &Path) -> io::Result<(Presentation, Vec<Ass
     fs::remove_dir_all(temp_dir)?;
 
     Ok((presentation, assets))
+}
+
+/// Helper function to recursively read assets from a directory
+fn read_assets_recursively(
+    base_dir: &Path,
+    current_dir: &Path,
+    assets: &mut Vec<Asset>,
+) -> io::Result<()> {
+    for entry in fs::read_dir(current_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            // Recursively read subdirectories
+            read_assets_recursively(base_dir, &path, assets)?;
+        } else if path.is_file() {
+            // Calculate relative path from base assets directory
+            let relative_path = path.strip_prefix(base_dir)
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
+                .to_string_lossy()
+                .to_string();
+
+            let data = fs::read(&path)?;
+            assets.push(Asset {
+                name: relative_path,
+                data,
+            });
+        }
+    }
+
+    Ok(())
 }
 
 /// Helper function to convert asset data to base64 for embedding in JSON

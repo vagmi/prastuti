@@ -2,6 +2,7 @@ import { Stage, Layer, Rect } from 'react-konva';
 import { useEditorStore } from '../../store';
 import { ElementType } from '../../types';
 import KonvaTextElement from './KonvaTextElement';
+import KonvaImageElement from './KonvaImageElement';
 
 export default function SlideCanvas() {
   const presentation = useEditorStore((s) => s.presentation);
@@ -75,6 +76,17 @@ export default function SlideCanvas() {
                   case ElementType.Text:
                     return (
                       <KonvaTextElement
+                        key={elementId}
+                        element={element}
+                        slideId={selectedSlideId}
+                        isSelected={isSelected}
+                        onSelect={() => selectElement(elementId)}
+                      />
+                    );
+
+                  case ElementType.Image:
+                    return (
+                      <KonvaImageElement
                         key={elementId}
                         element={element}
                         slideId={selectedSlideId}

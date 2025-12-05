@@ -6,13 +6,15 @@ import { createSelectionSlice, SelectionSlice } from './slices/selectionSlice';
 import { createHistorySlice, HistorySlice } from './slices/historySlice';
 import { createUISlice, UISlice } from './slices/uiSlice';
 import { createAnimationSlice, AnimationSlice } from './slices/animationSlice';
+import { createAssetsSlice, AssetsSlice } from './slices/assetsSlice';
 
 export type EditorStore = PresentationSlice &
   ElementsSlice &
   SelectionSlice &
   HistorySlice &
   UISlice &
-  AnimationSlice;
+  AnimationSlice &
+  AssetsSlice;
 
 export const useEditorStore = create<EditorStore>()(
   devtools(
@@ -23,6 +25,7 @@ export const useEditorStore = create<EditorStore>()(
       ...createHistorySlice(...a),
       ...createUISlice(...a),
       ...createAnimationSlice(...a),
+      ...createAssetsSlice(...a),
     }),
     { name: 'EditorStore' }
   )
