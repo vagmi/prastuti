@@ -1,5 +1,18 @@
-// Tailwind color palette organized by hue
+// Complete Tailwind color palette organized by hue
 export const TAILWIND_COLORS = {
+  Slate: [
+    { name: 'Slate 50', value: '#f8fafc' },
+    { name: 'Slate 100', value: '#f1f5f9' },
+    { name: 'Slate 200', value: '#e2e8f0' },
+    { name: 'Slate 300', value: '#cbd5e1' },
+    { name: 'Slate 400', value: '#94a3b8' },
+    { name: 'Slate 500', value: '#64748b' },
+    { name: 'Slate 600', value: '#475569' },
+    { name: 'Slate 700', value: '#334155' },
+    { name: 'Slate 800', value: '#1e293b' },
+    { name: 'Slate 900', value: '#0f172a' },
+    { name: 'Slate 950', value: '#020617' },
+  ],
   Gray: [
     { name: 'White', value: '#ffffff' },
     { name: 'Gray 50', value: '#f9fafb' },
@@ -12,7 +25,47 @@ export const TAILWIND_COLORS = {
     { name: 'Gray 700', value: '#374151' },
     { name: 'Gray 800', value: '#1f2937' },
     { name: 'Gray 900', value: '#111827' },
+    { name: 'Gray 950', value: '#030712' },
     { name: 'Black', value: '#000000' },
+  ],
+  Zinc: [
+    { name: 'Zinc 50', value: '#fafafa' },
+    { name: 'Zinc 100', value: '#f4f4f5' },
+    { name: 'Zinc 200', value: '#e4e4e7' },
+    { name: 'Zinc 300', value: '#d4d4d8' },
+    { name: 'Zinc 400', value: '#a1a1aa' },
+    { name: 'Zinc 500', value: '#71717a' },
+    { name: 'Zinc 600', value: '#52525b' },
+    { name: 'Zinc 700', value: '#3f3f46' },
+    { name: 'Zinc 800', value: '#27272a' },
+    { name: 'Zinc 900', value: '#18181b' },
+    { name: 'Zinc 950', value: '#09090b' },
+  ],
+  Neutral: [
+    { name: 'Neutral 50', value: '#fafafa' },
+    { name: 'Neutral 100', value: '#f5f5f5' },
+    { name: 'Neutral 200', value: '#e5e5e5' },
+    { name: 'Neutral 300', value: '#d4d4d4' },
+    { name: 'Neutral 400', value: '#a3a3a3' },
+    { name: 'Neutral 500', value: '#737373' },
+    { name: 'Neutral 600', value: '#525252' },
+    { name: 'Neutral 700', value: '#404040' },
+    { name: 'Neutral 800', value: '#262626' },
+    { name: 'Neutral 900', value: '#171717' },
+    { name: 'Neutral 950', value: '#0a0a0a' },
+  ],
+  Stone: [
+    { name: 'Stone 50', value: '#fafaf9' },
+    { name: 'Stone 100', value: '#f5f5f4' },
+    { name: 'Stone 200', value: '#e7e5e4' },
+    { name: 'Stone 300', value: '#d6d3d1' },
+    { name: 'Stone 400', value: '#a8a29e' },
+    { name: 'Stone 500', value: '#78716c' },
+    { name: 'Stone 600', value: '#57534e' },
+    { name: 'Stone 700', value: '#44403c' },
+    { name: 'Stone 800', value: '#292524' },
+    { name: 'Stone 900', value: '#1c1917' },
+    { name: 'Stone 950', value: '#0c0a09' },
   ],
   Red: [
     { name: 'Red 50', value: '#fef2f2' },
@@ -25,6 +78,7 @@ export const TAILWIND_COLORS = {
     { name: 'Red 700', value: '#b91c1c' },
     { name: 'Red 800', value: '#991b1b' },
     { name: 'Red 900', value: '#7f1d1d' },
+    { name: 'Red 950', value: '#450a0a' },
   ],
   Orange: [
     { name: 'Orange 50', value: '#fff7ed' },
@@ -37,6 +91,20 @@ export const TAILWIND_COLORS = {
     { name: 'Orange 700', value: '#c2410c' },
     { name: 'Orange 800', value: '#9a3412' },
     { name: 'Orange 900', value: '#7c2d12' },
+    { name: 'Orange 950', value: '#431407' },
+  ],
+  Amber: [
+    { name: 'Amber 50', value: '#fffbeb' },
+    { name: 'Amber 100', value: '#fef3c7' },
+    { name: 'Amber 200', value: '#fde68a' },
+    { name: 'Amber 300', value: '#fcd34d' },
+    { name: 'Amber 400', value: '#fbbf24' },
+    { name: 'Amber 500', value: '#f59e0b' },
+    { name: 'Amber 600', value: '#d97706' },
+    { name: 'Amber 700', value: '#b45309' },
+    { name: 'Amber 800', value: '#92400e' },
+    { name: 'Amber 900', value: '#78350f' },
+    { name: 'Amber 950', value: '#451a03' },
   ],
   Yellow: [
     { name: 'Yellow 50', value: '#fefce8' },
@@ -49,6 +117,20 @@ export const TAILWIND_COLORS = {
     { name: 'Yellow 700', value: '#a16207' },
     { name: 'Yellow 800', value: '#854d0e' },
     { name: 'Yellow 900', value: '#713f12' },
+    { name: 'Yellow 950', value: '#422006' },
+  ],
+  Lime: [
+    { name: 'Lime 50', value: '#f7fee7' },
+    { name: 'Lime 100', value: '#ecfccb' },
+    { name: 'Lime 200', value: '#d9f99d' },
+    { name: 'Lime 300', value: '#bef264' },
+    { name: 'Lime 400', value: '#a3e635' },
+    { name: 'Lime 500', value: '#84cc16' },
+    { name: 'Lime 600', value: '#65a30d' },
+    { name: 'Lime 700', value: '#4d7c0f' },
+    { name: 'Lime 800', value: '#3f6212' },
+    { name: 'Lime 900', value: '#365314' },
+    { name: 'Lime 950', value: '#1a2e05' },
   ],
   Green: [
     { name: 'Green 50', value: '#f0fdf4' },
@@ -61,6 +143,59 @@ export const TAILWIND_COLORS = {
     { name: 'Green 700', value: '#15803d' },
     { name: 'Green 800', value: '#166534' },
     { name: 'Green 900', value: '#14532d' },
+    { name: 'Green 950', value: '#052e16' },
+  ],
+  Emerald: [
+    { name: 'Emerald 50', value: '#ecfdf5' },
+    { name: 'Emerald 100', value: '#d1fae5' },
+    { name: 'Emerald 200', value: '#a7f3d0' },
+    { name: 'Emerald 300', value: '#6ee7b7' },
+    { name: 'Emerald 400', value: '#34d399' },
+    { name: 'Emerald 500', value: '#10b981' },
+    { name: 'Emerald 600', value: '#059669' },
+    { name: 'Emerald 700', value: '#047857' },
+    { name: 'Emerald 800', value: '#065f46' },
+    { name: 'Emerald 900', value: '#064e3b' },
+    { name: 'Emerald 950', value: '#022c22' },
+  ],
+  Teal: [
+    { name: 'Teal 50', value: '#f0fdfa' },
+    { name: 'Teal 100', value: '#ccfbf1' },
+    { name: 'Teal 200', value: '#99f6e4' },
+    { name: 'Teal 300', value: '#5eead4' },
+    { name: 'Teal 400', value: '#2dd4bf' },
+    { name: 'Teal 500', value: '#14b8a6' },
+    { name: 'Teal 600', value: '#0d9488' },
+    { name: 'Teal 700', value: '#0f766e' },
+    { name: 'Teal 800', value: '#115e59' },
+    { name: 'Teal 900', value: '#134e4a' },
+    { name: 'Teal 950', value: '#042f2e' },
+  ],
+  Cyan: [
+    { name: 'Cyan 50', value: '#ecfeff' },
+    { name: 'Cyan 100', value: '#cffafe' },
+    { name: 'Cyan 200', value: '#a5f3fc' },
+    { name: 'Cyan 300', value: '#67e8f9' },
+    { name: 'Cyan 400', value: '#22d3ee' },
+    { name: 'Cyan 500', value: '#06b6d4' },
+    { name: 'Cyan 600', value: '#0891b2' },
+    { name: 'Cyan 700', value: '#0e7490' },
+    { name: 'Cyan 800', value: '#155e75' },
+    { name: 'Cyan 900', value: '#164e63' },
+    { name: 'Cyan 950', value: '#083344' },
+  ],
+  Sky: [
+    { name: 'Sky 50', value: '#f0f9ff' },
+    { name: 'Sky 100', value: '#e0f2fe' },
+    { name: 'Sky 200', value: '#bae6fd' },
+    { name: 'Sky 300', value: '#7dd3fc' },
+    { name: 'Sky 400', value: '#38bdf8' },
+    { name: 'Sky 500', value: '#0ea5e9' },
+    { name: 'Sky 600', value: '#0284c7' },
+    { name: 'Sky 700', value: '#0369a1' },
+    { name: 'Sky 800', value: '#075985' },
+    { name: 'Sky 900', value: '#0c4a6e' },
+    { name: 'Sky 950', value: '#082f49' },
   ],
   Blue: [
     { name: 'Blue 50', value: '#eff6ff' },
@@ -73,6 +208,33 @@ export const TAILWIND_COLORS = {
     { name: 'Blue 700', value: '#1d4ed8' },
     { name: 'Blue 800', value: '#1e40af' },
     { name: 'Blue 900', value: '#1e3a8a' },
+    { name: 'Blue 950', value: '#172554' },
+  ],
+  Indigo: [
+    { name: 'Indigo 50', value: '#eef2ff' },
+    { name: 'Indigo 100', value: '#e0e7ff' },
+    { name: 'Indigo 200', value: '#c7d2fe' },
+    { name: 'Indigo 300', value: '#a5b4fc' },
+    { name: 'Indigo 400', value: '#818cf8' },
+    { name: 'Indigo 500', value: '#6366f1' },
+    { name: 'Indigo 600', value: '#4f46e5' },
+    { name: 'Indigo 700', value: '#4338ca' },
+    { name: 'Indigo 800', value: '#3730a3' },
+    { name: 'Indigo 900', value: '#312e81' },
+    { name: 'Indigo 950', value: '#1e1b4b' },
+  ],
+  Violet: [
+    { name: 'Violet 50', value: '#f5f3ff' },
+    { name: 'Violet 100', value: '#ede9fe' },
+    { name: 'Violet 200', value: '#ddd6fe' },
+    { name: 'Violet 300', value: '#c4b5fd' },
+    { name: 'Violet 400', value: '#a78bfa' },
+    { name: 'Violet 500', value: '#8b5cf6' },
+    { name: 'Violet 600', value: '#7c3aed' },
+    { name: 'Violet 700', value: '#6d28d9' },
+    { name: 'Violet 800', value: '#5b21b6' },
+    { name: 'Violet 900', value: '#4c1d95' },
+    { name: 'Violet 950', value: '#2e1065' },
   ],
   Purple: [
     { name: 'Purple 50', value: '#faf5ff' },
@@ -85,6 +247,20 @@ export const TAILWIND_COLORS = {
     { name: 'Purple 700', value: '#7e22ce' },
     { name: 'Purple 800', value: '#6b21a8' },
     { name: 'Purple 900', value: '#581c87' },
+    { name: 'Purple 950', value: '#3b0764' },
+  ],
+  Fuchsia: [
+    { name: 'Fuchsia 50', value: '#fdf4ff' },
+    { name: 'Fuchsia 100', value: '#fae8ff' },
+    { name: 'Fuchsia 200', value: '#f5d0fe' },
+    { name: 'Fuchsia 300', value: '#f0abfc' },
+    { name: 'Fuchsia 400', value: '#e879f9' },
+    { name: 'Fuchsia 500', value: '#d946ef' },
+    { name: 'Fuchsia 600', value: '#c026d3' },
+    { name: 'Fuchsia 700', value: '#a21caf' },
+    { name: 'Fuchsia 800', value: '#86198f' },
+    { name: 'Fuchsia 900', value: '#701a75' },
+    { name: 'Fuchsia 950', value: '#4a044e' },
   ],
   Pink: [
     { name: 'Pink 50', value: '#fdf2f8' },
@@ -97,6 +273,20 @@ export const TAILWIND_COLORS = {
     { name: 'Pink 700', value: '#be185d' },
     { name: 'Pink 800', value: '#9f1239' },
     { name: 'Pink 900', value: '#831843' },
+    { name: 'Pink 950', value: '#500724' },
+  ],
+  Rose: [
+    { name: 'Rose 50', value: '#fff1f2' },
+    { name: 'Rose 100', value: '#ffe4e6' },
+    { name: 'Rose 200', value: '#fecdd3' },
+    { name: 'Rose 300', value: '#fda4af' },
+    { name: 'Rose 400', value: '#fb7185' },
+    { name: 'Rose 500', value: '#f43f5e' },
+    { name: 'Rose 600', value: '#e11d48' },
+    { name: 'Rose 700', value: '#be123c' },
+    { name: 'Rose 800', value: '#9f1239' },
+    { name: 'Rose 900', value: '#881337' },
+    { name: 'Rose 950', value: '#4c0519' },
   ],
 };
 
@@ -107,21 +297,21 @@ interface ColorPaletteProps {
 
 export default function ColorPalette({ selectedColor, onColorSelect }: ColorPaletteProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {Object.entries(TAILWIND_COLORS).map(([category, colors]) => (
         <div key={category}>
-          <div className="text-[9px] font-semibold text-gray-500 mb-1 uppercase tracking-wider">
+          <div className="text-[8px] font-semibold text-gray-500 mb-0.5 uppercase tracking-wider">
             {category}
           </div>
-          <div className="grid grid-cols-6 gap-1">
+          <div className="grid grid-cols-11 gap-0.5">
             {colors.map((color) => (
               <button
                 key={color.value}
                 onClick={() => onColorSelect(color.value)}
-                className={`w-full aspect-square rounded border-2 transition-all hover:scale-110 ${
+                className={`w-full aspect-square rounded border transition-all hover:scale-125 ${
                   selectedColor.toLowerCase() === color.value.toLowerCase()
-                    ? 'border-purple-500 ring-2 ring-purple-200'
-                    : 'border-gray-200 hover:border-gray-400'
+                    ? 'border-purple-500 ring-1 ring-purple-300 z-10'
+                    : 'border-gray-300 hover:border-gray-500'
                 }`}
                 style={{ backgroundColor: color.value }}
                 title={color.name}

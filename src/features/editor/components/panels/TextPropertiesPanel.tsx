@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useEditorStore } from '../../store';
 import { TextElement } from '../../types';
-import { Type, Palette, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Space, LineChart } from 'lucide-react';
+import { Type, Palette, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Space, LineChart, ChevronDown, ChevronUp } from 'lucide-react';
+import ColorPalette from './ColorPalette';
 
 const FONT_OPTIONS = [
   { name: 'Arial', family: 'Arial, sans-serif' },
@@ -24,9 +26,15 @@ interface TextPropertiesPanelProps {
 
 export default function TextPropertiesPanel({ element, slideId }: TextPropertiesPanelProps) {
   const updateElement = useEditorStore((s) => s.updateElement);
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
 
   const handleUpdate = (props: Partial<TextElement>) => {
     updateElement(slideId, element.id, props);
+  };
+
+  const handleColorChange = (color: string) => {
+    handleUpdate({ fill: color });
+    setIsColorPickerOpen(false);
   };
 
   const toggleBold = () => {
@@ -82,34 +90,56 @@ export default function TextPropertiesPanel({ element, slideId }: TextProperties
         </select>
       </div>
 
-      <div className="grid grid-cols-2 gap-1.5">
-        <div>
-          <label className="text-[10px] text-gray-500 mb-0.5 block">Font Size</label>
-          <select
-            value={element.fontSize}
-            onChange={(e) => handleUpdate({ fontSize: Number(e.target.value) })}
-            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
-          >
-            {FONT_SIZES.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
+      <div>
+        <label className="text-[10px] text-gray-500 mb-0.5 block">Font Size</label>
+        <select
+          value={element.fontSize}
+          onChange={(e) => handleUpdate({ fontSize: Number(e.target.value) })}
+          className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+        >
+          {FONT_SIZES.map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Text Color */}
+      <div>
+        <div className="flex items-center gap-1 mb-1.5">
+          <Palette className="w-3 h-3 text-gray-500" />
+          <label className="text-xs font-semibold text-gray-700">Text Color</label>
         </div>
 
-        <div>
-          <label className="text-[10px] text-gray-500 mb-0.5 block">Color</label>
-          <div className="flex items-center gap-1">
-            <Palette className="w-3 h-3 text-gray-500" />
-            <input
-              type="color"
-              value={element.fill}
-              onChange={(e) => handleUpdate({ fill: e.target.value })}
-              className="flex-1 h-8 border border-gray-300 rounded cursor-pointer"
+        {/* Current Color Display */}
+        <button
+          onClick={() => setIsColorPickerOpen(!isColorPickerOpen)}
+          className="w-full flex items-center justify-between px-2 py-1.5 border border-gray-300 rounded hover:border-gray-400 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <div
+              className="w-6 h-6 rounded border border-gray-300"
+              style={{ backgroundColor: element.fill }}
+            />
+            <span className="text-xs text-gray-700 font-mono">{element.fill}</span>
+          </div>
+          {isColorPickerOpen ? (
+            <ChevronUp className="w-4 h-4 text-gray-500" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-gray-500" />
+          )}
+        </button>
+
+        {/* Color Palette Picker */}
+        {isColorPickerOpen && (
+          <div className="mt-2 p-2 border border-gray-300 rounded bg-white max-h-96 overflow-y-auto">
+            <ColorPalette
+              selectedColor={element.fill}
+              onColorSelect={handleColorChange}
             />
           </div>
-        </div>
+        )}
       </div>
 
       <div>

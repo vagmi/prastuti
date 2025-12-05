@@ -3,6 +3,7 @@ import { Stage, Layer, Rect, Text as KonvaText } from 'react-konva';
 import { useEditorStore } from '../../store';
 import { ElementType } from '../../types';
 import { X, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 interface SlideShowProps {
   onClose: () => void;
@@ -40,7 +41,17 @@ export default function SlideShow({ onClose }: SlideShowProps) {
         setCurrentSlideIndex(slideIds.length - 1);
         break;
       case 'Escape':
-        onClose();
+        // Exit fullscreen before closing
+        const exitAndClose = async () => {
+          try {
+            const appWindow = getCurrentWindow();
+            await appWindow.setFullscreen(false);
+          } catch (err) {
+            console.error('Failed to exit fullscreen:', err);
+          }
+          onClose();
+        };
+        exitAndClose();
         break;
     }
   }, [slideIds.length, onClose]);
@@ -50,28 +61,57 @@ export default function SlideShow({ onClose }: SlideShowProps) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Full screen management
+  // Full screen management using Tauri's native API
   const toggleFullScreen = async () => {
-    if (!document.fullscreenElement) {
+    try {
+      const appWindow = getCurrentWindow();
+      const currentFullscreen = await appWindow.isFullscreen();
+      await appWindow.setFullscreen(!currentFullscreen);
+      setIsFullScreen(!currentFullscreen);
+    } catch (err) {
+      console.error('Failed to toggle fullscreen:', err);
+    }
+  };
+
+  // Check initial fullscreen state and set up monitoring
+  useEffect(() => {
+    const checkFullscreen = async () => {
       try {
-        await document.documentElement.requestFullscreen();
+        const appWindow = getCurrentWindow();
+        const isFull = await appWindow.isFullscreen();
+        setIsFullScreen(isFull);
+      } catch (err) {
+        console.error('Failed to check fullscreen status:', err);
+      }
+    };
+
+    checkFullscreen();
+
+    // Enter fullscreen when slideshow starts
+    const enterFullscreen = async () => {
+      try {
+        const appWindow = getCurrentWindow();
+        await appWindow.setFullscreen(true);
         setIsFullScreen(true);
       } catch (err) {
         console.error('Failed to enter fullscreen:', err);
       }
-    } else {
-      await document.exitFullscreen();
-      setIsFullScreen(false);
-    }
-  };
-
-  useEffect(() => {
-    const handleFullScreenChange = () => {
-      setIsFullScreen(!!document.fullscreenElement);
     };
 
-    document.addEventListener('fullscreenchange', handleFullScreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
+    enterFullscreen();
+
+    // Exit fullscreen when component unmounts
+    return () => {
+      const exitFullscreen = async () => {
+        try {
+          const appWindow = getCurrentWindow();
+          await appWindow.setFullscreen(false);
+        } catch (err) {
+          console.error('Failed to exit fullscreen:', err);
+        }
+      };
+      exitFullscreen();
+    };
   }, []);
 
   // Auto-hide controls
