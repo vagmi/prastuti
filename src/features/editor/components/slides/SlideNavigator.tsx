@@ -1,4 +1,5 @@
 import { useEditorStore } from '../../store';
+import SlideThumbnail from './SlideThumbnail';
 
 export default function SlideNavigator() {
   const presentation = useEditorStore((s) => s.presentation);
@@ -45,14 +46,8 @@ export default function SlideNavigator() {
             onClick={() => selectSlide(slideId)}
           >
             {/* Slide Thumbnail */}
-            <div
-              className="w-40 h-24 bg-white border border-gray-300 rounded overflow-hidden flex items-center justify-center"
-              style={{ backgroundColor: slide.background.fill || '#ffffff' }}
-            >
-              <div className="text-gray-400 text-sm text-center">
-                <div className="font-semibold">{slide.name}</div>
-                <div className="text-xs mt-1">{slide.elementIds.length} elements</div>
-              </div>
+            <div className="w-40 h-24 bg-white border border-gray-300 rounded overflow-hidden">
+              <SlideThumbnail slide={slide} width={160} height={96} />
             </div>
 
             {/* Slide Number */}

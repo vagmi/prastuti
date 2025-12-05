@@ -34,8 +34,8 @@ export default function SlideCanvas() {
   const stageHeight = height * scale;
 
   const handleStageClick = (e: any) => {
-    // Deselect when clicking on empty area
-    const clickedOnEmpty = e.target === e.target.getStage();
+    // Deselect when clicking on empty area (Stage or Background Rect)
+    const clickedOnEmpty = e.target === e.target.getStage() || e.target.name() === 'background';
     if (clickedOnEmpty) {
       selectElement(null);
     }
@@ -56,6 +56,7 @@ export default function SlideCanvas() {
             <Layer>
               {/* Background */}
               <Rect
+                name="background"
                 x={0}
                 y={0}
                 width={width}

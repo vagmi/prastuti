@@ -4,6 +4,11 @@ import type { Presentation } from '../types/presentation';
 export interface PresentationLoadResult {
   presentation: Presentation;
   assets: Array<[string, string]>; // [filename, base64Data]
+  filePath: string;
+}
+
+export interface PresentationSaveResult {
+  filePath: string;
 }
 
 /**
@@ -65,7 +70,11 @@ export async function openPresentationDialog(): Promise<PresentationLoadResult |
   const filePath = await pickFileToOpen();
   if (!filePath) return null;
 
-  return await loadPresentation(filePath);
+  const result = await loadPresentation(filePath);
+  return {
+    ...result,
+    filePath,
+  };
 }
 
 /**
@@ -74,15 +83,15 @@ export async function openPresentationDialog(): Promise<PresentationLoadResult |
 export async function savePresentationDialog(
   presentation: Presentation,
   assets: Array<[string, string]> = []
-): Promise<boolean> {
+): Promise<PresentationSaveResult | null> {
   const defaultName = `${presentation.name}.prst`;
   const filePath = await pickFileToSave(defaultName);
 
-  if (!filePath) return false;
+  if (!filePath) return null;
 
   // Ensure .prst extension
   const finalPath = filePath.endsWith('.prst') ? filePath : `${filePath}.prst`;
 
   await savePresentation(presentation, assets, finalPath);
-  return true;
+  return { filePath: finalPath };
 }

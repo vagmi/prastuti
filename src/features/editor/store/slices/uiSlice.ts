@@ -27,7 +27,7 @@ export interface UISlice {
 
 export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   zoom: 1,
-  activePanel: PanelType.Slides,
+  activePanel: PanelType.None,
   showGrid: false,
   showRulers: false,
   snapToGrid: true,

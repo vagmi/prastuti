@@ -1,21 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useEditorStore } from '../../store';
 import { TextElement } from '../../types';
 import { Type, Palette, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Space, LineChart, ChevronDown, ChevronUp } from 'lucide-react';
 import ColorPalette from './ColorPalette';
-
-const FONT_OPTIONS = [
-  { name: 'Arial', family: 'Arial, sans-serif' },
-  { name: 'Helvetica', family: 'Helvetica, sans-serif' },
-  { name: 'Times New Roman', family: '"Times New Roman", serif' },
-  { name: 'Georgia', family: 'Georgia, serif' },
-  { name: 'Courier New', family: '"Courier New", monospace' },
-  { name: 'Verdana', family: 'Verdana, sans-serif' },
-  { name: 'Impact', family: 'Impact, sans-serif' },
-  { name: 'Comic Sans MS', family: '"Comic Sans MS", cursive' },
-  { name: 'Trebuchet MS', family: '"Trebuchet MS", sans-serif' },
-  { name: 'Arial Black', family: '"Arial Black", sans-serif' },
-];
+import { fetchGoogleFonts, loadGoogleFont, getFontFamilyCSS, type GoogleFont } from '../../services/googleFonts';
 
 const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72, 96, 144];
 
@@ -27,6 +15,28 @@ interface TextPropertiesPanelProps {
 export default function TextPropertiesPanel({ element, slideId }: TextPropertiesPanelProps) {
   const updateElement = useEditorStore((s) => s.updateElement);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const [googleFonts, setGoogleFonts] = useState<GoogleFont[]>([]);
+
+  useEffect(() => {
+    // Fetch Google Fonts on mount
+    const loadFonts = async () => {
+      try {
+        const fonts = await fetchGoogleFonts();
+        setGoogleFonts(fonts);
+      } catch (error) {
+        console.error('Failed to load Google Fonts:', error);
+      }
+    };
+
+    loadFonts();
+  }, []);
+
+  // Load the current font
+  useEffect(() => {
+    if (element.fontFamily) {
+      loadGoogleFont(element.fontFamily);
+    }
+  }, [element.fontFamily]);
 
   const handleUpdate = (props: Partial<TextElement>) => {
     updateElement(slideId, element.id, props);
@@ -35,6 +45,11 @@ export default function TextPropertiesPanel({ element, slideId }: TextProperties
   const handleColorChange = (color: string) => {
     handleUpdate({ fill: color });
     setIsColorPickerOpen(false);
+  };
+
+  const handleFontChange = (fontFamily: string) => {
+    loadGoogleFont(fontFamily);
+    handleUpdate({ fontFamily });
   };
 
   const toggleBold = () => {
@@ -78,13 +93,17 @@ export default function TextPropertiesPanel({ element, slideId }: TextProperties
         <label className="text-[10px] text-gray-500 mb-1 block">Font Family</label>
         <select
           value={element.fontFamily}
-          onChange={(e) => handleUpdate({ fontFamily: e.target.value })}
+          onChange={(e) => handleFontChange(e.target.value)}
           className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
-          style={{ fontFamily: element.fontFamily }}
+          style={{ fontFamily: getFontFamilyCSS(element.fontFamily) }}
         >
-          {FONT_OPTIONS.map((font) => (
-            <option key={font.name} value={font.name} style={{ fontFamily: font.family }}>
-              {font.name}
+          {googleFonts.map((font) => (
+            <option
+              key={font.family}
+              value={font.family}
+              style={{ fontFamily: getFontFamilyCSS(font.family) }}
+            >
+              {font.family}
             </option>
           ))}
         </select>

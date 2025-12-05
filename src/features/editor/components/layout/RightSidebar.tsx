@@ -22,7 +22,7 @@ export default function RightSidebar() {
       : null;
 
   const renderPanel = () => {
-    // Show element properties if element is selected
+    // Priority 1: Show element properties if element is selected
     if (selectedElement && selectedSlideId) {
       return (
         <>
@@ -46,17 +46,7 @@ export default function RightSidebar() {
       );
     }
 
-    // Show slide properties when no element is selected but a slide is selected
-    if (currentSlide && selectedSlideId && !selectedElement) {
-      return (
-        <>
-          <h2 className="mb-4 text-lg font-semibold text-gray-800">Slide Properties</h2>
-          <SlidePropertiesPanel slide={currentSlide} slideId={selectedSlideId} />
-        </>
-      );
-    }
-
-    // Show tool panels based on active panel
+    // Priority 2: Show tool panels based on active panel (when a tool is selected)
     switch (activePanel) {
       case PanelType.Text:
         return (
@@ -86,10 +76,22 @@ export default function RightSidebar() {
           </>
         );
 
+      case PanelType.None:
       default:
+        // Priority 3: Show slide properties when no tool is active and no element is selected
+        if (currentSlide && selectedSlideId) {
+          return (
+            <>
+              <h2 className="mb-4 text-lg font-semibold text-gray-800">Slide Properties</h2>
+              <SlidePropertiesPanel slide={currentSlide} slideId={selectedSlideId} />
+            </>
+          );
+        }
+
+        // Fallback: Nothing selected
         return (
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <p className="text-sm text-gray-600">Select a tool to begin</p>
+            <p className="text-sm text-gray-600">Select a tool or element to begin</p>
           </div>
         );
     }

@@ -13,6 +13,7 @@ export interface EditorUIState {
 }
 
 export enum PanelType {
+  None = 'none',
   Slides = 'slides',
   Text = 'text',
   Image = 'image',
