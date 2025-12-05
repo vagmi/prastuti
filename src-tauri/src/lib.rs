@@ -218,6 +218,55 @@ fn add_image_asset(presentation_path: String) -> Result<Option<serde_json::Value
     }
 }
 
+/// Create a temporary presentation file for a new unsaved presentation
+/// Returns the path to the temporary .prst file
+#[tauri::command]
+fn create_temp_presentation(presentation_json: String) -> Result<String, String> {
+    use std::fs;
+
+    // Parse presentation from JSON
+    let presentation: Presentation = serde_json::from_str(&presentation_json)
+        .map_err(|e| format!("Failed to parse presentation: {}", e))?;
+
+    // Create temp directory
+    let temp_dir = std::env::temp_dir().join(format!("prastuti_{}", uuid::Uuid::new_v4()));
+    let temp_file = temp_dir.join("presentation.prst");
+
+    fs::create_dir_all(&temp_dir)
+        .map_err(|e| format!("Failed to create temp directory: {}", e))?;
+
+    // Save initial presentation (no assets yet)
+    file_format::save_presentation(&presentation, vec![], &temp_file)
+        .map_err(|e| format!("Failed to save temp presentation: {}", e))?;
+
+    Ok(temp_file.to_string_lossy().to_string())
+}
+
+/// Move a temporary presentation to a permanent location
+/// This is called on the first "Save" operation
+#[tauri::command]
+fn move_temp_presentation(temp_path: String, destination_path: String) -> Result<(), String> {
+    use std::fs;
+
+    let temp = PathBuf::from(&temp_path);
+    let dest = PathBuf::from(&destination_path);
+
+    // Copy the file (use copy instead of rename for cross-filesystem compatibility)
+    fs::copy(&temp, &dest)
+        .map_err(|e| format!("Failed to copy temp presentation: {}", e))?;
+
+    // Remove the temporary file
+    fs::remove_file(&temp)
+        .map_err(|e| format!("Failed to remove temp file: {}", e))?;
+
+    // Try to remove the temp directory (may fail if not empty, that's okay)
+    if let Some(parent) = temp.parent() {
+        let _ = fs::remove_dir(parent);
+    }
+
+    Ok(())
+}
+
 /// Get an image asset as a data URL for display
 /// Reads the image from the presentation's assets and returns it as base64 data URL
 #[tauri::command]
@@ -276,7 +325,9 @@ pub fn run() {
             pick_file_to_save,
             pick_image_file,
             add_image_asset,
-            get_image_asset_data_url
+            get_image_asset_data_url,
+            create_temp_presentation,
+            move_temp_presentation
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

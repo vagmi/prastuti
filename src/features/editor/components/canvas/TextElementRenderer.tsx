@@ -118,29 +118,58 @@ export default function TextElementRenderer({
             textDecoration: element.textDecoration,
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
+            WebkitTextFillColor: element.fill,
+            WebkitTextStroke: element.strokeWidth ? `${element.strokeWidth * scale}px ${element.stroke || '#000000'}` : undefined,
           }}
         >
           {editText}
         </div>
       ) : (
-        <div
-          className="w-full h-full"
-          style={{
-            fontSize: `${element.fontSize * scale}px`,
-            fontFamily: element.fontFamily,
-            fontWeight: isBold ? 'bold' : 'normal',
-            fontStyle: isItalic ? 'italic' : 'normal',
-            color: element.fill,
-            textAlign: element.align,
-            lineHeight: element.lineHeight,
-            letterSpacing: `${element.letterSpacing}px`,
-            textDecoration: element.textDecoration,
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            pointerEvents: 'none',
-          }}
-        >
-          {element.text}
+        <div className="w-full h-full relative">
+          {/* Stroke layer - rendered behind */}
+          {element.strokeWidth && element.strokeWidth > 0 && (
+            <div
+              className="w-full h-full absolute inset-0"
+              style={{
+                fontSize: `${element.fontSize * scale}px`,
+                fontFamily: element.fontFamily,
+                fontWeight: isBold ? 'bold' : 'normal',
+                fontStyle: isItalic ? 'italic' : 'normal',
+                textAlign: element.align,
+                lineHeight: element.lineHeight,
+                letterSpacing: `${element.letterSpacing}px`,
+                textDecoration: element.textDecoration,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                pointerEvents: 'none',
+                WebkitTextFillColor: 'transparent',
+                WebkitTextStroke: `${element.strokeWidth * scale}px ${element.stroke || '#000000'}`,
+              }}
+            >
+              {element.text}
+            </div>
+          )}
+
+          {/* Fill layer - rendered on top */}
+          <div
+            className="w-full h-full relative"
+            style={{
+              fontSize: `${element.fontSize * scale}px`,
+              fontFamily: element.fontFamily,
+              fontWeight: isBold ? 'bold' : 'normal',
+              fontStyle: isItalic ? 'italic' : 'normal',
+              color: element.fill,
+              textAlign: element.align,
+              lineHeight: element.lineHeight,
+              letterSpacing: `${element.letterSpacing}px`,
+              textDecoration: element.textDecoration,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              pointerEvents: 'none',
+            }}
+          >
+            {element.text}
+          </div>
         </div>
       )}
       </div>

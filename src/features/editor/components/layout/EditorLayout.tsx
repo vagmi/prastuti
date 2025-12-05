@@ -8,6 +8,8 @@ import SlideShow from '../slideshow/SlideShow';
 import {
   savePresentation,
   loadPresentation,
+  createTempPresentation,
+  moveTempPresentation,
 } from '../../services/presentationService';
 import { setCurrentPresentationPath } from '../../services/assetService';
 import { Play } from 'lucide-react';
@@ -21,20 +23,36 @@ export default function EditorLayout() {
   const [isOpening, setIsOpening] = useState(false);
   const [isPresenting, setIsPresenting] = useState(false);
   const [lastSavedPath, setLastSavedPath] = useState<string | null>(null);
+  const [isTempPresentation, setIsTempPresentation] = useState(true); // Track if using temp file
   const [lastSavedTime, setLastSavedTime] = useState<number | null>(null);
   const lastUpdatedAtRef = useRef<number | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState('');
 
   useEffect(() => {
-    // Initialize with default presentation
-    if (!presentation) {
-      createPresentation('Untitled Presentation', {
-        width: 1920,
-        height: 1080,
-      });
-    }
-  }, [presentation, createPresentation]);
+    // Initialize with default presentation and create temp file
+    const initPresentation = async () => {
+      if (!presentation) {
+        createPresentation('Untitled Presentation', {
+          width: 1920,
+          height: 1080,
+        });
+      } else if (!lastSavedPath) {
+        // Create a temp file for the new presentation
+        try {
+          const tempPath = await createTempPresentation(presentation);
+          setLastSavedPath(tempPath);
+          setCurrentPresentationPath(tempPath);
+          setIsTempPresentation(true);
+          console.log('Created temp presentation at:', tempPath);
+        } catch (error) {
+          console.error('Failed to create temp presentation:', error);
+        }
+      }
+    };
+
+    initPresentation();
+  }, [presentation, createPresentation, lastSavedPath]);
 
   // Ensure presentation path is set when component mounts with existing path
   useEffect(() => {
@@ -69,13 +87,27 @@ export default function EditorLayout() {
 
     setIsSaving(true);
     try {
-      const filePath = await savePresentation(presentation);
-      if (filePath) {
-        setLastSavedPath(filePath);
-        setCurrentPresentationPath(filePath);
-        setLastSavedTime(Date.now());
-        lastUpdatedAtRef.current = presentation.updatedAt;
-        console.log('Presentation saved successfully to:', filePath);
+      if (isTempPresentation) {
+        // First time save - show dialog and move temp to permanent location
+        const newFilePath = await savePresentation(presentation);
+        if (newFilePath && lastSavedPath) {
+          // Move the temp file to the new location
+          await moveTempPresentation(lastSavedPath, newFilePath);
+          setLastSavedPath(newFilePath);
+          setCurrentPresentationPath(newFilePath);
+          setIsTempPresentation(false);
+          setLastSavedTime(Date.now());
+          lastUpdatedAtRef.current = presentation.updatedAt;
+          console.log('Presentation saved to:', newFilePath);
+        }
+      } else {
+        // Subsequent saves - just update the existing file
+        if (lastSavedPath) {
+          await savePresentation(presentation, { filePath: lastSavedPath });
+          setLastSavedTime(Date.now());
+          lastUpdatedAtRef.current = presentation.updatedAt;
+          console.log('Presentation updated at:', lastSavedPath);
+        }
       }
     } catch (error) {
       console.error('Failed to save presentation:', error);
@@ -95,6 +127,7 @@ export default function EditorLayout() {
         // when components try to render them
         setLastSavedPath(result.filePath);
         setCurrentPresentationPath(result.filePath);
+        setIsTempPresentation(false); // Loaded presentations are not temp
 
         // Now load the presentation data into the store
         // Images will be able to resolve their assets correctly

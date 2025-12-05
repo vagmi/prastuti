@@ -37,6 +37,9 @@ export interface TextElement extends BaseElement {
   lineHeight: number;
   letterSpacing: number;
   textDecoration: '' | 'underline' | 'line-through';
+  // Text outline/stroke
+  stroke?: string; // Outline color
+  strokeWidth?: number; // Outline thickness
   // Background box
   backgroundEnabled: boolean;
   backgroundColor?: string;

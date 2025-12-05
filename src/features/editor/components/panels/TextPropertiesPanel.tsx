@@ -15,6 +15,7 @@ interface TextPropertiesPanelProps {
 export default function TextPropertiesPanel({ element, slideId }: TextPropertiesPanelProps) {
   const updateElement = useEditorStore((s) => s.updateElement);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const [isOutlineColorPickerOpen, setIsOutlineColorPickerOpen] = useState(false);
   const [googleFonts, setGoogleFonts] = useState<GoogleFont[]>([]);
 
   useEffect(() => {
@@ -158,6 +159,67 @@ export default function TextPropertiesPanel({ element, slideId }: TextProperties
               onColorSelect={handleColorChange}
             />
           </div>
+        )}
+      </div>
+
+      {/* Text Outline */}
+      <div>
+        <div className="flex items-center gap-1 mb-1.5">
+          <Palette className="w-3 h-3 text-gray-500" />
+          <label className="text-xs font-semibold text-gray-700">Text Outline</label>
+        </div>
+
+        {/* Outline Width Slider */}
+        <div className="mb-2">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-[10px] text-gray-500">Width</label>
+            <span className="text-[10px] text-gray-500">{element.strokeWidth || 0}px</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="20"
+            step="1"
+            value={element.strokeWidth || 0}
+            onChange={(e) => handleUpdate({ strokeWidth: Number(e.target.value) })}
+            className="w-full"
+          />
+        </div>
+
+        {/* Outline Color - only show if width > 0 */}
+        {(element.strokeWidth || 0) > 0 && (
+          <>
+            <button
+              onClick={() => setIsOutlineColorPickerOpen(!isOutlineColorPickerOpen)}
+              className="w-full flex items-center justify-between px-2 py-1.5 border border-gray-300 rounded hover:border-gray-400 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-6 h-6 rounded border border-gray-300"
+                  style={{ backgroundColor: element.stroke || '#000000' }}
+                />
+                <span className="text-xs text-gray-700 font-mono">{element.stroke || '#000000'}</span>
+              </div>
+              {isOutlineColorPickerOpen ? (
+                <ChevronUp className="w-4 h-4 text-gray-500" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              )}
+            </button>
+
+            {/* Outline Color Palette Picker */}
+            {isOutlineColorPickerOpen && (
+              <div className="mt-2 p-2 border border-gray-300 rounded bg-white max-h-96 overflow-y-auto">
+                <ColorPalette
+                  selectedColor={element.stroke || '#000000'}
+                  onColorSelect={(color) => {
+                    handleUpdate({ stroke: color });
+                    setIsOutlineColorPickerOpen(false);
+                  }}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
 

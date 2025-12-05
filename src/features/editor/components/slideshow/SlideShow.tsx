@@ -206,26 +206,57 @@ export default function SlideShow({ onClose }: SlideShowProps) {
     const isItalic = fontStyle.includes('italic');
 
     return (
-      <KonvaText
-        key={element.id}
-        x={element.x}
-        y={element.y}
-        width={element.width}
-        height={element.height}
-        text={element.text}
-        fontSize={element.fontSize}
-        fontFamily={element.fontFamily}
-        fontStyle={`${isBold ? 'bold' : ''} ${isItalic ? 'italic' : ''}`.trim() || 'normal'}
-        fill={element.fill}
-        align={element.align}
-        verticalAlign={element.verticalAlign}
-        lineHeight={element.lineHeight}
-        letterSpacing={element.letterSpacing}
-        textDecoration={element.textDecoration}
-        rotation={element.rotation}
-        opacity={element.opacity}
-        visible={element.visible}
-      />
+      <>
+        {/* Stroke layer - render behind with only stroke */}
+        {element.strokeWidth && element.strokeWidth > 0 && (
+          <KonvaText
+            key={`${element.id}-stroke`}
+            x={element.x}
+            y={element.y}
+            width={element.width}
+            height={element.height}
+            text={element.text}
+            fontSize={element.fontSize}
+            fontFamily={element.fontFamily}
+            fontStyle={`${isBold ? 'bold' : ''} ${isItalic ? 'italic' : ''}`.trim() || 'normal'}
+            fillEnabled={false}
+            stroke={element.stroke}
+            strokeWidth={element.strokeWidth}
+            align={element.align}
+            verticalAlign={element.verticalAlign}
+            lineHeight={element.lineHeight}
+            letterSpacing={element.letterSpacing}
+            textDecoration={element.textDecoration}
+            rotation={element.rotation}
+            opacity={element.opacity}
+            visible={element.visible}
+            listening={false}
+          />
+        )}
+
+        {/* Fill layer - render on top with only fill */}
+        <KonvaText
+          key={element.id}
+          x={element.x}
+          y={element.y}
+          width={element.width}
+          height={element.height}
+          text={element.text}
+          fontSize={element.fontSize}
+          fontFamily={element.fontFamily}
+          fontStyle={`${isBold ? 'bold' : ''} ${isItalic ? 'italic' : ''}`.trim() || 'normal'}
+          fill={element.fill}
+          strokeEnabled={false}
+          align={element.align}
+          verticalAlign={element.verticalAlign}
+          lineHeight={element.lineHeight}
+          letterSpacing={element.letterSpacing}
+          textDecoration={element.textDecoration}
+          rotation={element.rotation}
+          opacity={element.opacity}
+          visible={element.visible}
+        />
+      </>
     );
   };
 

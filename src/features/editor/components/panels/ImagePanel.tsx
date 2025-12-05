@@ -3,7 +3,7 @@ import { useEditorStore } from '../../store';
 import { ElementType, PanelType } from '../../types';
 import { addImageAsset } from '../../services/presentationService';
 import { getCurrentPresentationPath } from '../../services/assetService';
-import { Image, Upload, AlertCircle } from 'lucide-react';
+import { Image, Upload } from 'lucide-react';
 
 export default function ImagePanel() {
   const selectedSlideId = useEditorStore((s) => s.selectedSlideId);
@@ -16,7 +16,7 @@ export default function ImagePanel() {
 
     const presentationPath = getCurrentPresentationPath();
     if (!presentationPath) {
-      alert('Please save your presentation before adding images.');
+      alert('Unable to add image. Please try again.');
       return;
     }
 
@@ -59,30 +59,12 @@ export default function ImagePanel() {
     }
   };
 
-  const presentationPath = getCurrentPresentationPath();
-  const needsSave = !presentationPath;
-
   return (
     <div className="space-y-6">
-      {/* Warning if presentation not saved */}
-      {needsSave && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <div>
-              <h3 className="text-sm font-semibold text-amber-900 mb-1">Save Required</h3>
-              <p className="text-xs text-amber-700">
-                Please save your presentation before adding images.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Upload Image Button */}
       <button
         onClick={handleAddImage}
-        disabled={isUploading || needsSave}
+        disabled={isUploading}
         className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isUploading ? (

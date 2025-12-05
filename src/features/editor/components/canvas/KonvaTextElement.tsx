@@ -143,6 +143,33 @@ export default function KonvaTextElement({
 
   return (
     <>
+      {/* Stroke layer - render behind with only stroke */}
+      {element.strokeWidth && element.strokeWidth > 0 && (
+        <KonvaText
+          x={element.x}
+          y={element.y}
+          width={element.width}
+          height={element.height}
+          text={element.text}
+          fontSize={element.fontSize}
+          fontFamily={element.fontFamily}
+          fontStyle={`${isBold ? 'bold' : ''} ${isItalic ? 'italic' : ''}`.trim() || 'normal'}
+          fillEnabled={false}
+          stroke={element.stroke}
+          strokeWidth={element.strokeWidth}
+          align={element.align}
+          verticalAlign={element.verticalAlign}
+          lineHeight={element.lineHeight}
+          letterSpacing={element.letterSpacing}
+          textDecoration={element.textDecoration}
+          rotation={element.rotation}
+          opacity={element.opacity}
+          visible={element.visible && !isEditing}
+          listening={false}
+        />
+      )}
+
+      {/* Fill layer - render on top with only fill */}
       <KonvaText
         ref={textRef}
         x={element.x}
@@ -154,6 +181,7 @@ export default function KonvaTextElement({
         fontFamily={element.fontFamily}
         fontStyle={`${isBold ? 'bold' : ''} ${isItalic ? 'italic' : ''}`.trim() || 'normal'}
         fill={element.fill}
+        strokeEnabled={false}
         align={element.align}
         verticalAlign={element.verticalAlign}
         lineHeight={element.lineHeight}

@@ -120,3 +120,31 @@ export async function getImageAssetDataUrl(
 
   return dataUrl;
 }
+
+/**
+ * Create a temporary presentation file for a new unsaved presentation
+ * Returns the path to the temporary .prst file
+ */
+export async function createTempPresentation(
+  presentation: Presentation
+): Promise<string> {
+  const presentationJson = JSON.stringify(presentation);
+  const tempPath = await invoke<string>('create_temp_presentation', {
+    presentationJson,
+  });
+  return tempPath;
+}
+
+/**
+ * Move a temporary presentation to a permanent location
+ * Called on the first "Save" operation
+ */
+export async function moveTempPresentation(
+  tempPath: string,
+  destinationPath: string
+): Promise<void> {
+  await invoke<void>('move_temp_presentation', {
+    tempPath,
+    destinationPath,
+  });
+}
