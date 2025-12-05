@@ -1,43 +1,87 @@
 import { useEditorStore } from '../../store';
-import { PanelType } from '../../types';
+import { ElementType, PanelType } from '../../types';
+import TextPanel from '../panels/TextPanel';
+import TextPropertiesPanel from '../panels/TextPropertiesPanel';
+import ElementPropertiesPanel from '../panels/ElementPropertiesPanel';
 
 export default function RightSidebar() {
   const activePanel = useEditorStore((s) => s.activePanel);
   const selectedElementId = useEditorStore((s) => s.selectedElementId);
+  const selectedSlideId = useEditorStore((s) => s.selectedSlideId);
+  const presentation = useEditorStore((s) => s.presentation);
+
+  const selectedElement =
+    selectedSlideId && selectedElementId && presentation
+      ? presentation.slides[selectedSlideId]?.elements[selectedElementId]
+      : null;
+
+  const renderPanel = () => {
+    // Show element properties if element is selected
+    if (selectedElement && selectedSlideId) {
+      return (
+        <>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800">
+            {selectedElement.type === ElementType.Text && 'Text Element'}
+            {selectedElement.type === ElementType.Image && 'Image Element'}
+            {selectedElement.type === ElementType.Rectangle && 'Rectangle'}
+            {selectedElement.type === ElementType.Circle && 'Circle'}
+          </h2>
+
+          {/* Universal Element Properties (position, size, rotation, etc.) */}
+          <ElementPropertiesPanel element={selectedElement} slideId={selectedSlideId} />
+
+          {/* Element-specific properties */}
+          {selectedElement.type === ElementType.Text && (
+            <TextPropertiesPanel element={selectedElement} slideId={selectedSlideId} />
+          )}
+
+          {/* Other element types will have their specific properties here */}
+        </>
+      );
+    }
+
+    // Show tool panels based on active panel
+    switch (activePanel) {
+      case PanelType.Text:
+        return (
+          <>
+            <h2 className="mb-4 text-lg font-semibold text-gray-800">Text</h2>
+            <TextPanel />
+          </>
+        );
+
+      case PanelType.Image:
+        return (
+          <>
+            <h2 className="mb-4 text-lg font-semibold text-gray-800">Image</h2>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <p className="text-sm text-gray-600">Image tools coming soon</p>
+            </div>
+          </>
+        );
+
+      case PanelType.Shape:
+        return (
+          <>
+            <h2 className="mb-4 text-lg font-semibold text-gray-800">Shape</h2>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <p className="text-sm text-gray-600">Shape tools coming soon</p>
+            </div>
+          </>
+        );
+
+      default:
+        return (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p className="text-sm text-gray-600">Select a tool to begin</p>
+          </div>
+        );
+    }
+  };
 
   return (
-    <div className="w-80 border-l border-gray-300 bg-white">
-      <div className="p-4">
-        <h2 className="mb-4 text-lg font-semibold text-gray-800">
-          {activePanel === PanelType.Text && 'Text Tools'}
-          {activePanel === PanelType.Image && 'Image Tools'}
-          {activePanel === PanelType.Shape && 'Shape Tools'}
-          {activePanel === PanelType.Slides && 'Slides'}
-          {activePanel === PanelType.TextProperties && 'Text Properties'}
-          {activePanel === PanelType.ImageProperties && 'Image Properties'}
-          {activePanel === PanelType.ShapeProperties && 'Shape Properties'}
-        </h2>
-
-        {selectedElementId ? (
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <p className="text-sm text-gray-600">
-              Element properties will be shown here in Phase 4
-            </p>
-            <p className="mt-2 text-xs text-gray-500">
-              Selected: {selectedElementId}
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <p className="text-sm text-gray-600">
-              Tool panels will be shown here
-            </p>
-            <p className="mt-2 text-xs text-gray-500">
-              Active panel: {activePanel}
-            </p>
-          </div>
-        )}
-      </div>
+    <div className="w-80 border-l border-gray-300 bg-white overflow-y-auto">
+      <div className="p-4">{renderPanel()}</div>
     </div>
   );
 }
