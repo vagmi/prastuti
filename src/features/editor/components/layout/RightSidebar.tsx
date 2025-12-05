@@ -3,6 +3,7 @@ import { ElementType, PanelType } from '../../types';
 import TextPanel from '../panels/TextPanel';
 import TextPropertiesPanel from '../panels/TextPropertiesPanel';
 import ElementPropertiesPanel from '../panels/ElementPropertiesPanel';
+import SlidePropertiesPanel from '../panels/SlidePropertiesPanel';
 
 export default function RightSidebar() {
   const activePanel = useEditorStore((s) => s.activePanel);
@@ -13,6 +14,11 @@ export default function RightSidebar() {
   const selectedElement =
     selectedSlideId && selectedElementId && presentation
       ? presentation.slides[selectedSlideId]?.elements[selectedElementId]
+      : null;
+
+  const currentSlide =
+    selectedSlideId && presentation
+      ? presentation.slides[selectedSlideId]
       : null;
 
   const renderPanel = () => {
@@ -36,6 +42,16 @@ export default function RightSidebar() {
           )}
 
           {/* Other element types will have their specific properties here */}
+        </>
+      );
+    }
+
+    // Show slide properties when no element is selected but a slide is selected
+    if (currentSlide && selectedSlideId && !selectedElement) {
+      return (
+        <>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800">Slide Properties</h2>
+          <SlidePropertiesPanel slide={currentSlide} slideId={selectedSlideId} />
         </>
       );
     }

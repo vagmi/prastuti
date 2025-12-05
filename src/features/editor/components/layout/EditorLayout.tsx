@@ -4,10 +4,12 @@ import LeftSidebar from './LeftSidebar';
 import RightSidebar from './RightSidebar';
 import SlideNavigator from '../slides/SlideNavigator';
 import SlideCanvas from '../canvas/SlideCanvas';
+import SlideShow from '../slideshow/SlideShow';
 import {
   openPresentationDialog,
   savePresentationDialog,
 } from '../../api/fileOperations';
+import { Play } from 'lucide-react';
 
 export default function EditorLayout() {
   const createPresentation = useEditorStore((s) => s.createPresentation);
@@ -15,6 +17,7 @@ export default function EditorLayout() {
   const presentation = useEditorStore((s) => s.presentation);
   const [isSaving, setIsSaving] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
+  const [isPresenting, setIsPresenting] = useState(false);
 
   useEffect(() => {
     // Initialize with default presentation
@@ -68,27 +71,35 @@ export default function EditorLayout() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-gray-100">
-      {/* Top Toolbar */}
-      <div className="border-b border-gray-300 bg-white px-4 py-2 flex items-center justify-between">
-        <h1 className="text-lg font-semibold">{presentation.name}</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={handleOpen}
-            disabled={isOpening}
-            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isOpening ? 'Opening...' : 'Open'}
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isSaving ? 'Saving...' : 'Save'}
-          </button>
+    <>
+      <div className="flex h-screen flex-col bg-gray-100">
+        {/* Top Toolbar */}
+        <div className="border-b border-gray-300 bg-white px-4 py-2 flex items-center justify-between">
+          <h1 className="text-lg font-semibold">{presentation.name}</h1>
+          <div className="flex gap-2">
+            <button
+              onClick={handleOpen}
+              disabled={isOpening}
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+            >
+              {isOpening ? 'Opening...' : 'Open'}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              onClick={() => setIsPresenting(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors text-sm font-medium"
+            >
+              <Play className="w-4 h-4" />
+              Present
+            </button>
+          </div>
         </div>
-      </div>
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
@@ -107,5 +118,11 @@ export default function EditorLayout() {
         <RightSidebar />
       </div>
     </div>
+
+      {/* Slide Show Modal */}
+      {isPresenting && (
+        <SlideShow onClose={() => setIsPresenting(false)} />
+      )}
+    </>
   );
 }
