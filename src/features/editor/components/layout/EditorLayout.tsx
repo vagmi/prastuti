@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useEditorStore } from '../../store';
 import LeftSidebar from './LeftSidebar';
 import RightSidebar from './RightSidebar';
@@ -12,40 +12,44 @@ import {
   moveTempPresentation,
 } from '../../services/presentationService';
 import { setCurrentPresentationPath } from '../../services/assetService';
-import { Play, FolderOpen, Save, PanelRightClose, PanelRight } from 'lucide-react';
+import { Play, FolderOpen, Save, PanelRightClose, PanelRight, FilePlus2 } from 'lucide-react';
+import { ask } from '@tauri-apps/plugin-dialog';
 
 export default function EditorLayout() {
   const createPresentation = useEditorStore((s) => s.createPresentation);
   const loadPresentationIntoStore = useEditorStore((s) => s.loadPresentation);
+  const clearPresentation = useEditorStore((s) => s.clearPresentation);
   const updatePresentationName = useEditorStore((s) => s.updatePresentationName);
   const presentation = useEditorStore((s) => s.presentation);
+  const filePath = useEditorStore((s) => s.filePath);
+  const isTemp = useEditorStore((s) => s.isTemp);
+  const isDirty = useEditorStore((s) => s.isDirty);
+  const setFilePath = useEditorStore((s) => s.setFilePath);
+  const markAsSaved = useEditorStore((s) => s.markAsSaved);
   const showRightPanel = useEditorStore((s) => s.showRightPanel);
   const toggleRightPanel = useEditorStore((s) => s.toggleRightPanel);
   const [isSaving, setIsSaving] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
   const [isPresenting, setIsPresenting] = useState(false);
-  const [lastSavedPath, setLastSavedPath] = useState<string | null>(null);
-  const [isTempPresentation, setIsTempPresentation] = useState(true); // Track if using temp file
   const [lastSavedTime, setLastSavedTime] = useState<number | null>(null);
-  const lastUpdatedAtRef = useRef<number | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState('');
 
+  // Initialize with default presentation and create temp file
   useEffect(() => {
-    // Initialize with default presentation and create temp file
     const initPresentation = async () => {
       if (!presentation) {
         createPresentation('Untitled Presentation', {
           width: 1920,
           height: 1080,
         });
-      } else if (!lastSavedPath) {
+      } else if (!filePath) {
         // Create a temp file for the new presentation
         try {
           const tempPath = await createTempPresentation(presentation);
-          setLastSavedPath(tempPath);
+          setFilePath(tempPath, true);
           setCurrentPresentationPath(tempPath);
-          setIsTempPresentation(true);
+          markAsSaved(); // Mark as saved initially
           console.log('Created temp presentation at:', tempPath);
         } catch (error) {
           console.error('Failed to create temp presentation:', error);
@@ -54,26 +58,26 @@ export default function EditorLayout() {
     };
 
     initPresentation();
-  }, [presentation, createPresentation, lastSavedPath]);
+  }, [presentation, createPresentation, filePath, setFilePath, markAsSaved]);
 
   // Ensure presentation path is set when component mounts with existing path
   useEffect(() => {
-    if (lastSavedPath) {
-      setCurrentPresentationPath(lastSavedPath);
+    if (filePath) {
+      setCurrentPresentationPath(filePath);
     }
-  }, [lastSavedPath]);
+  }, [filePath]);
 
   // Autosave every 5 seconds
   useEffect(() => {
-    if (!presentation || !lastSavedPath) return;
+    if (!presentation || !filePath) return;
 
     const autoSaveInterval = setInterval(async () => {
-      // Only save if there are changes
-      if (lastUpdatedAtRef.current !== presentation.updatedAt) {
+      // Only save if dirty
+      if (isDirty()) {
         try {
-          await savePresentation(presentation, { filePath: lastSavedPath });
+          await savePresentation(presentation, { filePath });
+          markAsSaved();
           setLastSavedTime(Date.now());
-          lastUpdatedAtRef.current = presentation.updatedAt;
           console.log('Auto-saved at', new Date().toLocaleTimeString());
         } catch (error) {
           console.error('Auto-save failed:', error);
@@ -82,33 +86,74 @@ export default function EditorLayout() {
     }, 5000); // 5 seconds
 
     return () => clearInterval(autoSaveInterval);
-  }, [presentation, lastSavedPath]);
+  }, [presentation, filePath, isDirty, markAsSaved]);
+
+  // Prompt before unload if dirty
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  const promptSaveIfDirty = async (): Promise<boolean> => {
+    if (!isDirty()) return true;
+
+    const result = await ask('You have unsaved changes. Do you want to save them?', {
+      title: 'Unsaved Changes',
+      kind: 'warning',
+      okLabel: 'Save',
+      cancelLabel: 'Discard',
+    });
+
+    if (result) {
+      await handleSave();
+    }
+    return true; // Continue with the action
+  };
+
+  const handleNew = async () => {
+    // Prompt to save if dirty
+    const canContinue = await promptSaveIfDirty();
+    if (!canContinue) return;
+
+    // Clear current presentation and create new one
+    clearPresentation();
+    createPresentation('Untitled Presentation', {
+      width: 1920,
+      height: 1080,
+    });
+  };
 
   const handleSave = async () => {
     if (!presentation) return;
 
     setIsSaving(true);
     try {
-      if (isTempPresentation) {
+      if (isTemp) {
         // First time save - show dialog and move temp to permanent location
         const newFilePath = await savePresentation(presentation);
-        if (newFilePath && lastSavedPath) {
+        if (newFilePath && filePath) {
           // Move the temp file to the new location
-          await moveTempPresentation(lastSavedPath, newFilePath);
-          setLastSavedPath(newFilePath);
+          await moveTempPresentation(filePath, newFilePath);
+          setFilePath(newFilePath, false);
           setCurrentPresentationPath(newFilePath);
-          setIsTempPresentation(false);
+          markAsSaved();
           setLastSavedTime(Date.now());
-          lastUpdatedAtRef.current = presentation.updatedAt;
           console.log('Presentation saved to:', newFilePath);
         }
       } else {
         // Subsequent saves - just update the existing file
-        if (lastSavedPath) {
-          await savePresentation(presentation, { filePath: lastSavedPath });
+        if (filePath) {
+          await savePresentation(presentation, { filePath });
+          markAsSaved();
           setLastSavedTime(Date.now());
-          lastUpdatedAtRef.current = presentation.updatedAt;
-          console.log('Presentation updated at:', lastSavedPath);
+          console.log('Presentation updated at:', filePath);
         }
       }
     } catch (error) {
@@ -120,23 +165,23 @@ export default function EditorLayout() {
   };
 
   const handleOpen = async () => {
+    // Prompt to save if dirty
+    const canContinue = await promptSaveIfDirty();
+    if (!canContinue) return;
+
     setIsOpening(true);
     try {
       const result = await loadPresentation();
       if (result) {
-        // IMPORTANT: Set the presentation path FIRST, before loading into store
-        // This ensures the asset service knows where to load images from
-        // when components try to render them
-        setLastSavedPath(result.filePath);
+        // Clear current presentation first
+        clearPresentation();
+
+        // Set the presentation path and load data
+        setFilePath(result.filePath, false);
         setCurrentPresentationPath(result.filePath);
-        setIsTempPresentation(false); // Loaded presentations are not temp
-
-        // Now load the presentation data into the store
-        // Images will be able to resolve their assets correctly
         loadPresentationIntoStore(result.presentation);
-
+        markAsSaved();
         setLastSavedTime(Date.now());
-        lastUpdatedAtRef.current = result.presentation.updatedAt;
         console.log('Presentation loaded successfully from:', result.filePath);
       }
     } catch (error) {
@@ -146,6 +191,28 @@ export default function EditorLayout() {
       setIsOpening(false);
     }
   };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+      if (modifier && e.key === 'n') {
+        e.preventDefault();
+        handleNew();
+      } else if (modifier && e.key === 'o') {
+        e.preventDefault();
+        handleOpen();
+      } else if (modifier && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDirty, presentation, filePath, isTemp]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTitleClick = () => {
     if (presentation) {
@@ -167,6 +234,26 @@ export default function EditorLayout() {
     } else if (e.key === 'Escape') {
       setIsEditingTitle(false);
     }
+  };
+
+  // Get display name for title
+  const getDisplayName = () => {
+    if (!presentation) return 'Loading...';
+
+    let name = presentation.name;
+
+    // Add file path if not temp
+    if (filePath && !isTemp) {
+      const fileName = filePath.split(/[\\/]/).pop() || name;
+      name = fileName.replace(/\.prastuti$/, '');
+    }
+
+    // Add asterisk if dirty
+    if (isDirty()) {
+      name = `${name} *`;
+    }
+
+    return name;
   };
 
   if (!presentation) {
@@ -199,22 +286,36 @@ export default function EditorLayout() {
                 onClick={handleTitleClick}
                 title="Click to edit title"
               >
-                {presentation.name}
+                {getDisplayName()}
               </h1>
             )}
-            {lastSavedTime && lastSavedPath && (
+            {lastSavedTime && filePath && !isDirty() && (
               <span className="text-xs text-gray-400 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                Auto-saved at {new Date(lastSavedTime).toLocaleTimeString()}
+                Saved at {new Date(lastSavedTime).toLocaleTimeString()}
+              </span>
+            )}
+            {isDirty() && (
+              <span className="text-xs text-amber-600 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
+                Unsaved changes
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={handleNew}
+              className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded-lg transition-all text-sm font-medium hover:border-gray-400"
+              title="New presentation (⌘N / Ctrl+N)"
+            >
+              <FilePlus2 className="w-4 h-4" />
+              <span>New</span>
+            </button>
+            <button
               onClick={handleOpen}
               disabled={isOpening}
               className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium hover:border-gray-400"
-              title="Open presentation"
+              title="Open presentation (⌘O / Ctrl+O)"
             >
               <FolderOpen className="w-4 h-4" />
               <span>{isOpening ? 'Opening...' : 'Open'}</span>
@@ -223,7 +324,7 @@ export default function EditorLayout() {
               onClick={handleSave}
               disabled={isSaving}
               className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium hover:border-gray-400"
-              title="Save presentation"
+              title="Save presentation (⌘S / Ctrl+S)"
             >
               <Save className="w-4 h-4" />
               <span>{isSaving ? 'Saving...' : 'Save'}</span>

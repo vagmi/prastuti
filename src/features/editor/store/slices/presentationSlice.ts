@@ -4,6 +4,17 @@ import { Presentation, Dimensions, BackgroundConfig, SlideElement } from '../../
 
 export interface PresentationSlice {
   presentation: Presentation | null;
+  filePath: string | null;
+  isTemp: boolean; // Whether this is a temp file
+  lastSavedUpdatedAt: number | null; // Track when we last saved to compare with presentation.updatedAt
+
+  // Computed
+  isDirty: () => boolean;
+
+  // File Management Actions
+  setFilePath: (path: string | null, isTemp: boolean) => void;
+  markAsSaved: () => void;
+  clearPresentation: () => void;
 
   // Actions
   createPresentation: (name: string, dimensions: Dimensions) => void;
@@ -27,6 +38,37 @@ export const createPresentationSlice: StateCreator<
   PresentationSlice
 > = (set, get) => ({
   presentation: null,
+  filePath: null,
+  isTemp: false,
+  lastSavedUpdatedAt: null,
+
+  isDirty: () => {
+    const state = get();
+    if (!state.presentation) return false;
+    if (state.lastSavedUpdatedAt === null) return true; // Never saved
+    return state.presentation.updatedAt > state.lastSavedUpdatedAt;
+  },
+
+  setFilePath: (path, isTemp) => {
+    set({ filePath: path, isTemp });
+  },
+
+  markAsSaved: () => {
+    const state = get();
+    set({ lastSavedUpdatedAt: state.presentation?.updatedAt || Date.now() });
+  },
+
+  clearPresentation: () => {
+    set({
+      presentation: null,
+      filePath: null,
+      isTemp: false,
+      lastSavedUpdatedAt: null
+    });
+    (get() as any).clearHistory();
+    (get() as any).selectSlide(null);
+    (get() as any).selectElement(null);
+  },
 
   createPresentation: (name, dimensions) => {
     const slideId = uuid();
