@@ -3,6 +3,7 @@ import { useEditorStore } from '../../store';
 import { ElementType } from '../../types';
 import KonvaTextElement from './KonvaTextElement';
 import KonvaImageElement from './KonvaImageElement';
+import KonvaShapeElement from './KonvaShapeElement';
 
 export default function SlideCanvas() {
   const presentation = useEditorStore((s) => s.presentation);
@@ -95,7 +96,21 @@ export default function SlideCanvas() {
                       />
                     );
 
-                  // Other element types will be added later
+                  case ElementType.Rectangle:
+                  case ElementType.Circle:
+                  case ElementType.Ellipse:
+                  case ElementType.Polygon:
+                  case ElementType.Star:
+                    return (
+                      <KonvaShapeElement
+                        key={elementId}
+                        element={element}
+                        slideId={selectedSlideId}
+                        isSelected={isSelected}
+                        onSelect={() => selectElement(elementId)}
+                      />
+                    );
+
                   default:
                     return null;
                 }

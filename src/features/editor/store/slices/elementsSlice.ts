@@ -77,14 +77,65 @@ export const createElementsSlice: StateCreator<
         break;
 
       case ElementType.Rectangle:
-      case ElementType.Circle:
         element = {
           ...baseElement,
-          type,
+          type: ElementType.Rectangle,
           fill: props.fill ?? '#3b82f6',
           stroke: props.stroke ?? '#000000',
           strokeWidth: props.strokeWidth ?? 0,
           cornerRadius: props.cornerRadius ?? 0,
+        } as ShapeElement;
+        break;
+
+      case ElementType.Circle:
+        element = {
+          ...baseElement,
+          type: ElementType.Circle,
+          width: props.width ?? 100,
+          height: props.height ?? 100,
+          fill: props.fill ?? '#3b82f6',
+          stroke: props.stroke ?? '#000000',
+          strokeWidth: props.strokeWidth ?? 0,
+        } as ShapeElement;
+        break;
+
+      case ElementType.Ellipse:
+        element = {
+          ...baseElement,
+          type: ElementType.Ellipse,
+          width: props.width ?? 120,
+          height: props.height ?? 80,
+          fill: props.fill ?? '#3b82f6',
+          stroke: props.stroke ?? '#000000',
+          strokeWidth: props.strokeWidth ?? 0,
+        } as ShapeElement;
+        break;
+
+      case ElementType.Polygon:
+        element = {
+          ...baseElement,
+          type: ElementType.Polygon,
+          width: props.width ?? 100,
+          height: props.height ?? 100,
+          fill: props.fill ?? '#3b82f6',
+          stroke: props.stroke ?? '#000000',
+          strokeWidth: props.strokeWidth ?? 0,
+          sides: props.sides ?? 6,
+        } as ShapeElement;
+        break;
+
+      case ElementType.Star:
+        element = {
+          ...baseElement,
+          type: ElementType.Star,
+          width: props.width ?? 100,
+          height: props.height ?? 100,
+          fill: props.fill ?? '#3b82f6',
+          stroke: props.stroke ?? '#000000',
+          strokeWidth: props.strokeWidth ?? 0,
+          points: props.points ?? 5,
+          innerRadius: props.innerRadius ?? 0.5,
+          outerRadius: props.outerRadius ?? 1,
         } as ShapeElement;
         break;
 

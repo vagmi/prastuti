@@ -5,6 +5,9 @@ export enum ElementType {
   Image = 'image',
   Rectangle = 'rectangle',
   Circle = 'circle',
+  Ellipse = 'ellipse',
+  Polygon = 'polygon',
+  Star = 'star',
 }
 
 export interface BaseElement {
@@ -58,13 +61,20 @@ export interface ImageElement extends BaseElement {
 }
 
 export interface ShapeElement extends BaseElement {
-  type: ElementType.Rectangle | ElementType.Circle;
+  type: ElementType.Rectangle | ElementType.Circle | ElementType.Ellipse | ElementType.Polygon | ElementType.Star;
   fill: string;
   stroke: string;
   strokeWidth: number;
-  cornerRadius?: number; // For rectangles
+  // For rectangles
+  cornerRadius?: number;
   // For circles
   radius?: number;
+  // For polygons
+  sides?: number;
+  // For stars
+  points?: number;
+  innerRadius?: number;
+  outerRadius?: number;
 }
 
 export type Element = TextElement | ImageElement | ShapeElement;

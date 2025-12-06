@@ -12,13 +12,15 @@ import {
   moveTempPresentation,
 } from '../../services/presentationService';
 import { setCurrentPresentationPath } from '../../services/assetService';
-import { Play } from 'lucide-react';
+import { Play, FolderOpen, Save, PanelRightClose, PanelRight } from 'lucide-react';
 
 export default function EditorLayout() {
   const createPresentation = useEditorStore((s) => s.createPresentation);
   const loadPresentationIntoStore = useEditorStore((s) => s.loadPresentation);
   const updatePresentationName = useEditorStore((s) => s.updatePresentationName);
   const presentation = useEditorStore((s) => s.presentation);
+  const showRightPanel = useEditorStore((s) => s.showRightPanel);
+  const toggleRightPanel = useEditorStore((s) => s.toggleRightPanel);
   const [isSaving, setIsSaving] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
   const [isPresenting, setIsPresenting] = useState(false);
@@ -179,8 +181,8 @@ export default function EditorLayout() {
     <>
       <div className="flex h-screen flex-col bg-gray-100">
         {/* Top Toolbar */}
-        <div className="border-b border-gray-300 bg-white px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="border-b border-gray-200 bg-white px-6 py-3 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-4">
             {isEditingTitle ? (
               <input
                 type="text"
@@ -189,11 +191,11 @@ export default function EditorLayout() {
                 onBlur={handleTitleBlur}
                 onKeyDown={handleTitleKeyDown}
                 autoFocus
-                className="text-lg font-semibold px-2 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
+                className="text-lg font-semibold px-3 py-1.5 border border-purple-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
               />
             ) : (
               <h1
-                className="text-lg font-semibold px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors"
+                className="text-lg font-semibold px-3 py-1.5 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
                 onClick={handleTitleClick}
                 title="Click to edit title"
               >
@@ -201,32 +203,49 @@ export default function EditorLayout() {
               </h1>
             )}
             {lastSavedTime && lastSavedPath && (
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-gray-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
                 Auto-saved at {new Date(lastSavedTime).toLocaleTimeString()}
               </span>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button
               onClick={handleOpen}
               disabled={isOpening}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+              className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium hover:border-gray-400"
+              title="Open presentation"
             >
-              {isOpening ? 'Opening...' : 'Open'}
+              <FolderOpen className="w-4 h-4" />
+              <span>{isOpening ? 'Opening...' : 'Open'}</span>
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+              className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium hover:border-gray-400"
+              title="Save presentation"
             >
-              {isSaving ? 'Saving...' : 'Save'}
+              <Save className="w-4 h-4" />
+              <span>{isSaving ? 'Saving...' : 'Save'}</span>
             </button>
+            <div className="w-px h-6 bg-gray-300 mx-1"></div>
             <button
               onClick={() => setIsPresenting(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors text-sm font-medium"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg transition-all text-sm font-medium shadow-sm hover:shadow"
             >
-              <Play className="w-4 h-4" />
-              Present
+              <Play className="w-4 h-4 fill-white" />
+              <span>Present</span>
+            </button>
+            <button
+              onClick={toggleRightPanel}
+              className="p-2 hover:bg-gray-100 text-gray-700 rounded-lg transition-colors"
+              title={showRightPanel ? 'Hide properties panel' : 'Show properties panel'}
+            >
+              {showRightPanel ? (
+                <PanelRightClose className="w-5 h-5" />
+              ) : (
+                <PanelRight className="w-5 h-5" />
+              )}
             </button>
           </div>
         </div>
@@ -245,7 +264,7 @@ export default function EditorLayout() {
         </div>
 
         {/* Right Sidebar - Properties */}
-        <RightSidebar />
+        {showRightPanel && <RightSidebar />}
       </div>
     </div>
 

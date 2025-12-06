@@ -10,6 +10,7 @@ export interface UISlice {
   snapToObjects: boolean;
   guideLines: { vertical: number[]; horizontal: number[] };
   isPlaying: boolean;
+  showRightPanel: boolean;
 
   setZoom: (zoom: number) => void;
   zoomIn: () => void;
@@ -23,6 +24,7 @@ export interface UISlice {
   setGuideLines: (lines: { vertical: number[]; horizontal: number[] }) => void;
   clearGuideLines: () => void;
   setIsPlaying: (isPlaying: boolean) => void;
+  toggleRightPanel: () => void;
 }
 
 export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
@@ -34,6 +36,7 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   snapToObjects: true,
   guideLines: { vertical: [], horizontal: [] },
   isPlaying: false,
+  showRightPanel: true,
 
   setZoom: (zoom) => set({ zoom: Math.max(0.1, Math.min(5, zoom)) }),
 
@@ -61,4 +64,6 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   clearGuideLines: () => set({ guideLines: { vertical: [], horizontal: [] } }),
 
   setIsPlaying: (isPlaying) => set({ isPlaying }),
+
+  toggleRightPanel: () => set((state) => ({ showRightPanel: !state.showRightPanel })),
 });

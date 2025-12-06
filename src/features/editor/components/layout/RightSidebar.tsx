@@ -2,7 +2,9 @@ import { useEditorStore } from '../../store';
 import { ElementType, PanelType } from '../../types';
 import TextPanel from '../panels/TextPanel';
 import ImagePanel from '../panels/ImagePanel';
+import ShapePanel from '../panels/ShapePanel';
 import TextPropertiesPanel from '../panels/TextPropertiesPanel';
+import ShapePropertiesPanel from '../panels/ShapePropertiesPanel';
 import ElementPropertiesPanel from '../panels/ElementPropertiesPanel';
 import SlidePropertiesPanel from '../panels/SlidePropertiesPanel';
 
@@ -32,6 +34,9 @@ export default function RightSidebar() {
             {selectedElement.type === ElementType.Image && 'Image Element'}
             {selectedElement.type === ElementType.Rectangle && 'Rectangle'}
             {selectedElement.type === ElementType.Circle && 'Circle'}
+            {selectedElement.type === ElementType.Ellipse && 'Ellipse'}
+            {selectedElement.type === ElementType.Polygon && 'Polygon'}
+            {selectedElement.type === ElementType.Star && 'Star'}
           </h2>
 
           {/* Universal Element Properties (position, size, rotation, etc.) */}
@@ -42,7 +47,13 @@ export default function RightSidebar() {
             <TextPropertiesPanel element={selectedElement} slideId={selectedSlideId} />
           )}
 
-          {/* Other element types will have their specific properties here */}
+          {(selectedElement.type === ElementType.Rectangle ||
+            selectedElement.type === ElementType.Circle ||
+            selectedElement.type === ElementType.Ellipse ||
+            selectedElement.type === ElementType.Polygon ||
+            selectedElement.type === ElementType.Star) && (
+            <ShapePropertiesPanel element={selectedElement} slideId={selectedSlideId} />
+          )}
         </>
       );
     }
@@ -69,9 +80,7 @@ export default function RightSidebar() {
         return (
           <>
             <h2 className="mb-4 text-lg font-semibold text-gray-800">Shape</h2>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <p className="text-sm text-gray-600">Shape tools coming soon</p>
-            </div>
+            <ShapePanel />
           </>
         );
 

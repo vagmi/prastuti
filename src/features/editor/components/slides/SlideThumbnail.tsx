@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Stage, Layer, Rect, Text as KonvaText, Image as KonvaImage } from 'react-konva';
+import { Stage, Layer, Rect, Text as KonvaText, Image as KonvaImage, Circle, Ellipse, RegularPolygon, Star } from 'react-konva';
 import useImage from 'use-image';
 import { resolveAssetUrl } from '../../services/assetService';
 import { Slide, ElementType } from '../../types';
@@ -167,6 +167,93 @@ export default function SlideThumbnail({ slide, width = 160, height = 96 }: Slid
                   return renderTextElement(element);
                 case ElementType.Image:
                   return <ThumbnailImage key={element.id} element={element} />;
+                case ElementType.Rectangle:
+                  return (
+                    <Rect
+                      key={element.id}
+                      x={element.x}
+                      y={element.y}
+                      width={element.width}
+                      height={element.height}
+                      rotation={element.rotation}
+                      opacity={element.opacity}
+                      fill={element.fill}
+                      stroke={element.stroke}
+                      strokeWidth={element.strokeWidth}
+                      cornerRadius={element.cornerRadius || 0}
+                    />
+                  );
+                case ElementType.Circle:
+                  return (
+                    <Circle
+                      key={element.id}
+                      x={element.x}
+                      y={element.y}
+                      radius={Math.min(element.width, element.height) / 2}
+                      offsetX={-element.width / 2}
+                      offsetY={-element.height / 2}
+                      rotation={element.rotation}
+                      opacity={element.opacity}
+                      fill={element.fill}
+                      stroke={element.stroke}
+                      strokeWidth={element.strokeWidth}
+                    />
+                  );
+                case ElementType.Ellipse:
+                  return (
+                    <Ellipse
+                      key={element.id}
+                      x={element.x}
+                      y={element.y}
+                      radiusX={element.width / 2}
+                      radiusY={element.height / 2}
+                      offsetX={-element.width / 2}
+                      offsetY={-element.height / 2}
+                      rotation={element.rotation}
+                      opacity={element.opacity}
+                      fill={element.fill}
+                      stroke={element.stroke}
+                      strokeWidth={element.strokeWidth}
+                    />
+                  );
+                case ElementType.Polygon:
+                  return (
+                    <RegularPolygon
+                      key={element.id}
+                      x={element.x}
+                      y={element.y}
+                      sides={element.sides || 6}
+                      radius={Math.min(element.width, element.height) / 2}
+                      offsetX={-element.width / 2}
+                      offsetY={-element.height / 2}
+                      rotation={element.rotation}
+                      opacity={element.opacity}
+                      fill={element.fill}
+                      stroke={element.stroke}
+                      strokeWidth={element.strokeWidth}
+                    />
+                  );
+                case ElementType.Star:
+                  const outerRadius = Math.min(element.width, element.height) / 2;
+                  const innerRadiusRatio = element.innerRadius || 0.5;
+                  const innerRadius = outerRadius * innerRadiusRatio;
+                  return (
+                    <Star
+                      key={element.id}
+                      x={element.x}
+                      y={element.y}
+                      numPoints={element.points || 5}
+                      outerRadius={outerRadius}
+                      innerRadius={innerRadius}
+                      offsetX={-element.width / 2}
+                      offsetY={-element.height / 2}
+                      rotation={element.rotation}
+                      opacity={element.opacity}
+                      fill={element.fill}
+                      stroke={element.stroke}
+                      strokeWidth={element.strokeWidth}
+                    />
+                  );
                 default:
                   return null;
               }
