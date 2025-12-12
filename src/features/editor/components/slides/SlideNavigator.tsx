@@ -2,17 +2,22 @@ import { useEditorStore } from '../../store';
 import SlideThumbnail from './SlideThumbnail';
 
 export default function SlideNavigator() {
-  const presentation = useEditorStore((s) => s.presentation);
-  const selectedSlideId = useEditorStore((s) => s.selectedSlideId);
+  const activePresentationId = useEditorStore((s) => s.activePresentationId);
+  const presentation = useEditorStore((s) =>
+    s.activePresentationId ? s.presentations[s.activePresentationId] : null
+  );
+  const selectedSlideId = useEditorStore((s) =>
+    s.activePresentationId ? s.selectedSlideIds[s.activePresentationId] : null
+  );
   const selectSlide = useEditorStore((s) => s.selectSlide);
   const createSlide = useEditorStore((s) => s.createSlide);
   const duplicateSlide = useEditorStore((s) => s.duplicateSlide);
   const deleteSlide = useEditorStore((s) => s.deleteSlide);
 
-  if (!presentation) return null;
+  if (!presentation || !activePresentationId) return null;
 
   const handleAddSlide = () => {
-    createSlide(selectedSlideId);
+    createSlide(selectedSlideId || undefined);
   };
 
   const handleDuplicateSlide = (slideId: string, e: React.MouseEvent) => {
@@ -43,7 +48,7 @@ export default function SlideNavigator() {
             className={`relative flex-shrink-0 group cursor-pointer transition-all ${
               isSelected ? 'ring-2 ring-blue-500' : 'hover:ring-2 hover:ring-gray-300'
             }`}
-            onClick={() => selectSlide(slideId)}
+            onClick={() => selectSlide(activePresentationId, slideId)}
           >
             {/* Slide Thumbnail */}
             <div className="w-40 h-24 bg-white border border-gray-300 rounded overflow-hidden">

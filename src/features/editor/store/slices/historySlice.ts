@@ -2,17 +2,17 @@ import { StateCreator } from 'zustand';
 import { Presentation } from '../../types';
 
 interface HistoryState {
-  past: Presentation[];
-  future: Presentation[];
+  past: Record<string, Presentation[]>;
+  future: Record<string, Presentation[]>;
 }
 
 export interface HistorySlice extends HistoryState {
-  takeSnapshot: () => void;
-  undo: () => void;
-  redo: () => void;
-  canUndo: () => boolean;
-  canRedo: () => boolean;
-  clearHistory: () => void;
+  takeSnapshot: (presentationId: string) => void;
+  undo: (presentationId: string) => void;
+  redo: (presentationId: string) => void;
+  canUndo: (presentationId: string) => boolean;
+  canRedo: (presentationId: string) => boolean;
+  clearPresentationHistory: (presentationId: string) => void;
 }
 
 const MAX_HISTORY = 50;
@@ -23,61 +23,111 @@ export const createHistorySlice: StateCreator<
   [],
   HistorySlice
 > = (set, get) => ({
-  past: [],
-  future: [],
+  past: {},
+  future: {},
 
-  takeSnapshot: () => {
+  takeSnapshot: (presentationId) => {
     const state = get() as any;
-    const presentation = state.presentation;
+    const presentation = state.presentations?.[presentationId];
 
     if (!presentation) return;
 
     // Deep clone presentation
     const snapshot = JSON.parse(JSON.stringify(presentation));
 
+    set((state) => {
+      const currentPast = state.past[presentationId] || [];
+      return {
+        past: {
+          ...state.past,
+          [presentationId]: [...currentPast, snapshot].slice(-MAX_HISTORY),
+        },
+        future: {
+          ...state.future,
+          [presentationId]: [], // Clear redo stack on new action
+        },
+      };
+    });
+  },
+
+  undo: (presentationId) => {
+    const state = get();
+    const presentationPast = state.past[presentationId] || [];
+
+    if (presentationPast.length === 0) return;
+
+    const previous = presentationPast[presentationPast.length - 1];
+    const current = (state as any).presentations?.[presentationId];
+
+    if (!current) return;
+
+    const currentFuture = state.future[presentationId] || [];
+
     set((state) => ({
-      past: [...state.past, snapshot].slice(-MAX_HISTORY),
-      future: [], // Clear redo stack on new action
+      past: {
+        ...state.past,
+        [presentationId]: presentationPast.slice(0, -1),
+      },
+      future: {
+        ...state.future,
+        [presentationId]: [current, ...currentFuture].slice(0, MAX_HISTORY),
+      },
+      presentations: {
+        ...(state as any).presentations,
+        [presentationId]: previous,
+      },
     }));
   },
 
-  undo: () => {
+  redo: (presentationId) => {
     const state = get();
+    const presentationFuture = state.future[presentationId] || [];
 
-    if (state.past.length === 0) return;
+    if (presentationFuture.length === 0) return;
 
-    const previous = state.past[state.past.length - 1];
-    const current = (state as any).presentation;
+    const next = presentationFuture[0];
+    const current = (state as any).presentations?.[presentationId];
 
-    set({
-      past: state.past.slice(0, -1),
-      future: [current, ...state.future].slice(0, MAX_HISTORY),
-    });
+    if (!current) return;
 
-    (get() as any).loadPresentation(previous);
+    const currentPast = state.past[presentationId] || [];
+
+    set((state) => ({
+      past: {
+        ...state.past,
+        [presentationId]: [...currentPast, current].slice(-MAX_HISTORY),
+      },
+      future: {
+        ...state.future,
+        [presentationId]: presentationFuture.slice(1),
+      },
+      presentations: {
+        ...(state as any).presentations,
+        [presentationId]: next,
+      },
+    }));
   },
 
-  redo: () => {
+  canUndo: (presentationId) => {
     const state = get();
-
-    if (state.future.length === 0) return;
-
-    const next = state.future[0];
-    const current = (state as any).presentation;
-
-    set({
-      past: [...state.past, current].slice(-MAX_HISTORY),
-      future: state.future.slice(1),
-    });
-
-    (get() as any).loadPresentation(next);
+    const presentationPast = state.past[presentationId] || [];
+    return presentationPast.length > 0;
   },
 
-  canUndo: () => get().past.length > 0,
+  canRedo: (presentationId) => {
+    const state = get();
+    const presentationFuture = state.future[presentationId] || [];
+    return presentationFuture.length > 0;
+  },
 
-  canRedo: () => get().future.length > 0,
-
-  clearHistory: () => {
-    set({ past: [], future: [] });
+  clearPresentationHistory: (presentationId) => {
+    set((state) => {
+      const { [presentationId]: removedPast, ...remainingPast } = state.past;
+      const { [presentationId]: removedFuture, ...remainingFuture } = state.future;
+      return {
+        past: remainingPast,
+        future: remainingFuture,
+      };
+    });
   },
 });

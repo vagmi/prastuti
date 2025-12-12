@@ -6,9 +6,16 @@ import KonvaImageElement from './KonvaImageElement';
 import KonvaShapeElement from './KonvaShapeElement';
 
 export default function SlideCanvas() {
-  const presentation = useEditorStore((s) => s.presentation);
-  const selectedSlideId = useEditorStore((s) => s.selectedSlideId);
-  const selectedElementId = useEditorStore((s) => s.selectedElementId);
+  const activePresentationId = useEditorStore((s) => s.activePresentationId);
+  const presentation = useEditorStore((s) =>
+    s.activePresentationId ? s.presentations[s.activePresentationId] : null
+  );
+  const selectedSlideId = useEditorStore((s) =>
+    s.activePresentationId ? s.selectedSlideIds[s.activePresentationId] : null
+  );
+  const selectedElementId = useEditorStore((s) =>
+    s.activePresentationId ? s.selectedElementIds[s.activePresentationId] : null
+  );
   const selectElement = useEditorStore((s) => s.selectElement);
 
   if (!presentation || !selectedSlideId) {
@@ -38,8 +45,8 @@ export default function SlideCanvas() {
   const handleStageClick = (e: any) => {
     // Deselect when clicking on empty area (Stage or Background Rect)
     const clickedOnEmpty = e.target === e.target.getStage() || e.target.name() === 'background';
-    if (clickedOnEmpty) {
-      selectElement(null);
+    if (clickedOnEmpty && activePresentationId) {
+      selectElement(activePresentationId, null);
     }
   };
 
@@ -81,7 +88,7 @@ export default function SlideCanvas() {
                         element={element}
                         slideId={selectedSlideId}
                         isSelected={isSelected}
-                        onSelect={() => selectElement(elementId)}
+                        onSelect={() => activePresentationId && selectElement(activePresentationId, elementId)}
                       />
                     );
 
@@ -92,7 +99,7 @@ export default function SlideCanvas() {
                         element={element}
                         slideId={selectedSlideId}
                         isSelected={isSelected}
-                        onSelect={() => selectElement(elementId)}
+                        onSelect={() => activePresentationId && selectElement(activePresentationId, elementId)}
                       />
                     );
 
@@ -107,7 +114,7 @@ export default function SlideCanvas() {
                         element={element}
                         slideId={selectedSlideId}
                         isSelected={isSelected}
-                        onSelect={() => selectElement(elementId)}
+                        onSelect={() => activePresentationId && selectElement(activePresentationId, elementId)}
                       />
                     );
 

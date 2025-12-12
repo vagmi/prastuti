@@ -3,22 +3,29 @@ import { v4 as uuid } from 'uuid';
 import { Presentation, Dimensions, BackgroundConfig, SlideElement } from '../../types';
 
 export interface PresentationSlice {
-  presentation: Presentation | null;
-  filePath: string | null;
-  isTemp: boolean; // Whether this is a temp file
-  lastSavedUpdatedAt: number | null; // Track when we last saved to compare with presentation.updatedAt
+  // Multi-presentation state
+  presentations: Record<string, Presentation>;
+  presentationIds: string[];
+  activePresentationId: string | null;
+  filePaths: Record<string, string | null>;
+  isTemp: Record<string, boolean>;
+  lastSavedUpdatedAt: Record<string, number | null>;
 
-  // Computed
-  isDirty: () => boolean;
+  // Computed/helpers
+  getActivePresentation: () => Presentation | null;
+  isDirty: (presentationId: string) => boolean;
+
+  // Tab Management
+  setActivePresentation: (presentationId: string) => void;
+  closePresentation: (presentationId: string) => void;
 
   // File Management Actions
-  setFilePath: (path: string | null, isTemp: boolean) => void;
-  markAsSaved: () => void;
-  clearPresentation: () => void;
+  setFilePath: (presentationId: string, path: string | null, isTemp: boolean) => void;
+  markAsSaved: (presentationId: string) => void;
 
   // Actions
-  createPresentation: (name: string, dimensions: Dimensions) => void;
-  loadPresentation: (presentation: Presentation) => void;
+  createPresentation: (name: string, dimensions: Dimensions) => string;
+  loadPresentation: (presentation: Presentation, filePath: string) => string;
   updatePresentationName: (name: string) => void;
 
   // Slide CRUD
@@ -37,43 +44,94 @@ export const createPresentationSlice: StateCreator<
   [],
   PresentationSlice
 > = (set, get) => ({
-  presentation: null,
-  filePath: null,
-  isTemp: false,
-  lastSavedUpdatedAt: null,
+  presentations: {},
+  presentationIds: [],
+  activePresentationId: null,
+  filePaths: {},
+  isTemp: {},
+  lastSavedUpdatedAt: {},
 
-  isDirty: () => {
+  getActivePresentation: () => {
     const state = get();
-    if (!state.presentation) return false;
-    if (state.lastSavedUpdatedAt === null) return true; // Never saved
-    return state.presentation.updatedAt > state.lastSavedUpdatedAt;
+    if (!state.activePresentationId) return null;
+    return state.presentations[state.activePresentationId] || null;
   },
 
-  setFilePath: (path, isTemp) => {
-    set({ filePath: path, isTemp });
-  },
-
-  markAsSaved: () => {
+  isDirty: (presentationId: string) => {
     const state = get();
-    set({ lastSavedUpdatedAt: state.presentation?.updatedAt || Date.now() });
+    const presentation = state.presentations[presentationId];
+    if (!presentation) return false;
+    const lastSaved = state.lastSavedUpdatedAt[presentationId];
+    if (lastSaved === null || lastSaved === undefined) return true; // Never saved
+    return presentation.updatedAt > lastSaved;
   },
 
-  clearPresentation: () => {
+  setActivePresentation: (presentationId) => {
+    set({ activePresentationId: presentationId });
+  },
+
+  closePresentation: (presentationId) => {
+    const state = get();
+
+    // Remove from presentations
+    const { [presentationId]: removed, ...remainingPresentations } = state.presentations;
+    const newPresentationIds = state.presentationIds.filter(id => id !== presentationId);
+
+    // Remove metadata
+    const { [presentationId]: removedPath, ...remainingPaths } = state.filePaths;
+    const { [presentationId]: removedTemp, ...remainingTemp } = state.isTemp;
+    const { [presentationId]: removedSaved, ...remainingSaved } = state.lastSavedUpdatedAt;
+
+    // Update active presentation if needed
+    let newActiveId = state.activePresentationId;
+    if (state.activePresentationId === presentationId) {
+      const currentIndex = state.presentationIds.indexOf(presentationId);
+      if (newPresentationIds.length > 0) {
+        // Select next tab, or previous if this was the last one
+        const nextIndex = currentIndex < newPresentationIds.length ? currentIndex : currentIndex - 1;
+        newActiveId = newPresentationIds[Math.max(0, nextIndex)];
+      } else {
+        newActiveId = null;
+      }
+    }
+
     set({
-      presentation: null,
-      filePath: null,
-      isTemp: false,
-      lastSavedUpdatedAt: null
+      presentations: remainingPresentations,
+      presentationIds: newPresentationIds,
+      activePresentationId: newActiveId,
+      filePaths: remainingPaths,
+      isTemp: remainingTemp,
+      lastSavedUpdatedAt: remainingSaved,
     });
-    (get() as any).clearHistory();
-    (get() as any).selectSlide(null);
-    (get() as any).selectElement(null);
+
+    // Clean up related state for this presentation
+    (get() as any).clearPresentationSelection?.(presentationId);
+    (get() as any).clearPresentationHistory?.(presentationId);
+  },
+
+  setFilePath: (presentationId, path, isTempFile) => {
+    set((state) => ({
+      filePaths: { ...state.filePaths, [presentationId]: path },
+      isTemp: { ...state.isTemp, [presentationId]: isTempFile },
+    }));
+  },
+
+  markAsSaved: (presentationId) => {
+    const state = get();
+    const presentation = state.presentations[presentationId];
+    set((state) => ({
+      lastSavedUpdatedAt: {
+        ...state.lastSavedUpdatedAt,
+        [presentationId]: presentation?.updatedAt || Date.now(),
+      },
+    }));
   },
 
   createPresentation: (name, dimensions) => {
+    const presentationId = uuid();
     const slideId = uuid();
     const presentation: Presentation = {
-      id: uuid(),
+      id: presentationId,
       name,
       slideIds: [slideId],
       slides: {
@@ -91,83 +149,121 @@ export const createPresentationSlice: StateCreator<
       updatedAt: Date.now(),
     };
 
-    set({ presentation });
+    set((state) => ({
+      presentations: { ...state.presentations, [presentationId]: presentation },
+      presentationIds: [...state.presentationIds, presentationId],
+      activePresentationId: presentationId,
+      filePaths: { ...state.filePaths, [presentationId]: null },
+      isTemp: { ...state.isTemp, [presentationId]: false },
+      lastSavedUpdatedAt: { ...state.lastSavedUpdatedAt, [presentationId]: null },
+    }));
 
     // Select first slide
-    (get() as any).selectSlide(slideId);
+    (get() as any).selectSlide(presentationId, slideId);
 
     // Trigger history snapshot
-    (get() as any).takeSnapshot();
+    (get() as any).takeSnapshot(presentationId);
+
+    return presentationId;
   },
 
-  loadPresentation: (presentation) => {
-    set({ presentation });
-    (get() as any).clearHistory();
+  loadPresentation: (presentation, filePath) => {
+    const presentationId = presentation.id;
 
-    // Select first slide if none selected
-    const selectedSlideId = (get() as any).selectedSlideId;
-    if (!selectedSlideId && presentation.slideIds.length > 0) {
-      (get() as any).selectSlide(presentation.slideIds[0]);
+    set((state) => ({
+      presentations: { ...state.presentations, [presentationId]: presentation },
+      presentationIds: [...state.presentationIds, presentationId],
+      activePresentationId: presentationId,
+      filePaths: { ...state.filePaths, [presentationId]: filePath },
+      isTemp: { ...state.isTemp, [presentationId]: false },
+      lastSavedUpdatedAt: { ...state.lastSavedUpdatedAt, [presentationId]: presentation.updatedAt },
+    }));
+
+    // Clear history for this presentation
+    (get() as any).clearPresentationHistory?.(presentationId);
+
+    // Select first slide if available
+    if (presentation.slideIds.length > 0) {
+      (get() as any).selectSlide(presentationId, presentation.slideIds[0]);
     }
+
+    return presentationId;
   },
 
   updatePresentationName: (name) => {
+    const state = get();
+    const presentationId = state.activePresentationId;
+    if (!presentationId) return;
+
     set((state) => ({
-      presentation: state.presentation
-        ? { ...state.presentation, name, updatedAt: Date.now() }
-        : null,
+      presentations: {
+        ...state.presentations,
+        [presentationId]: {
+          ...state.presentations[presentationId],
+          name,
+          updatedAt: Date.now(),
+        },
+      },
     }));
-    (get() as any).takeSnapshot();
+    (get() as any).takeSnapshot(presentationId);
   },
 
   createSlide: (afterSlideId) => {
     const slideId = uuid();
     const state = get();
+    const presentationId = state.activePresentationId;
+    if (!presentationId) return slideId;
 
-    if (!state.presentation) return slideId;
+    const presentation = state.presentations[presentationId];
+    if (!presentation) return slideId;
 
     const afterIndex = afterSlideId
-      ? state.presentation.slideIds.indexOf(afterSlideId)
-      : state.presentation.slideIds.length - 1;
+      ? presentation.slideIds.indexOf(afterSlideId)
+      : presentation.slideIds.length - 1;
 
-    const newSlideIds = [...state.presentation.slideIds];
+    const newSlideIds = [...presentation.slideIds];
     newSlideIds.splice(afterIndex + 1, 0, slideId);
 
     const slideNumber = afterIndex + 2;
 
     set((state) => ({
-      presentation: state.presentation
-        ? {
-            ...state.presentation,
-            slideIds: newSlideIds,
-            slides: {
-              ...state.presentation.slides,
-              [slideId]: {
-                id: slideId,
-                name: `Slide ${slideNumber}`,
-                dimensions: state.presentation.defaultDimensions,
-                background: { type: 'color', fill: '#ffffff' },
-                elementIds: [],
-                elements: {},
-              },
+      presentations: {
+        ...state.presentations,
+        [presentationId]: {
+          ...presentation,
+          slideIds: newSlideIds,
+          slides: {
+            ...presentation.slides,
+            [slideId]: {
+              id: slideId,
+              name: `Slide ${slideNumber}`,
+              dimensions: presentation.defaultDimensions,
+              background: { type: 'color', fill: '#ffffff' },
+              elementIds: [],
+              elements: {},
             },
-            updatedAt: Date.now(),
-          }
-        : null,
+          },
+          updatedAt: Date.now(),
+        },
+      },
     }));
 
     // Select the newly created slide
-    (get() as any).selectSlide(slideId);
+    (get() as any).selectSlide(presentationId, slideId);
 
-    (get() as any).takeSnapshot();
+    (get() as any).takeSnapshot(presentationId);
     return slideId;
   },
 
   duplicateSlide: (slideId) => {
     const state = get();
-    if (!state.presentation?.slides[slideId]) return;
+    const presentationId = state.activePresentationId;
+    if (!presentationId) return;
 
-    const sourceSlide = state.presentation.slides[slideId];
+    const presentation = state.presentations[presentationId];
+    if (!presentation?.slides[slideId]) return;
+
+    const sourceSlide = presentation.slides[slideId];
     const newSlideId = uuid();
 
     // Deep clone elements with new IDs
@@ -183,130 +279,170 @@ export const createPresentationSlice: StateCreator<
       };
     });
 
-    const index = state.presentation.slideIds.indexOf(slideId);
-    const newSlideIds = [...state.presentation.slideIds];
+    const index = presentation.slideIds.indexOf(slideId);
+    const newSlideIds = [...presentation.slideIds];
     newSlideIds.splice(index + 1, 0, newSlideId);
 
     set((state) => ({
-      presentation: state.presentation
-        ? {
-            ...state.presentation,
-            slideIds: newSlideIds,
-            slides: {
-              ...state.presentation.slides,
-              [newSlideId]: {
-                ...sourceSlide,
-                id: newSlideId,
-                name: `${sourceSlide.name} (Copy)`,
-                elementIds: newElementIds,
-                elements: newElements,
-                thumbnail: undefined, // Will regenerate
-              },
+      presentations: {
+        ...state.presentations,
+        [presentationId]: {
+          ...presentation,
+          slideIds: newSlideIds,
+          slides: {
+            ...presentation.slides,
+            [newSlideId]: {
+              ...sourceSlide,
+              id: newSlideId,
+              name: `${sourceSlide.name} (Copy)`,
+              elementIds: newElementIds,
+              elements: newElements,
+              thumbnail: undefined,
             },
-            updatedAt: Date.now(),
-          }
-        : null,
+          },
+          updatedAt: Date.now(),
+        },
+      },
     }));
 
-    (get() as any).takeSnapshot();
+    (get() as any).takeSnapshot(presentationId);
   },
 
   deleteSlide: (slideId) => {
     const state = get();
-    if (!state.presentation) return;
+    const presentationId = state.activePresentationId;
+    if (!presentationId) return;
 
-    const newSlideIds = state.presentation.slideIds.filter((id) => id !== slideId);
+    const presentation = state.presentations[presentationId];
+    if (!presentation) return;
+
+    const newSlideIds = presentation.slideIds.filter((id) => id !== slideId);
 
     // Must keep at least one slide
     if (newSlideIds.length === 0) return;
 
-    const { [slideId]: deleted, ...remainingSlides } = state.presentation.slides;
+    const { [slideId]: deleted, ...remainingSlides } = presentation.slides;
 
     set((state) => ({
-      presentation: state.presentation
-        ? {
-            ...state.presentation,
-            slideIds: newSlideIds,
-            slides: remainingSlides,
-            updatedAt: Date.now(),
-          }
-        : null,
+      presentations: {
+        ...state.presentations,
+        [presentationId]: {
+          ...presentation,
+          slideIds: newSlideIds,
+          slides: remainingSlides,
+          updatedAt: Date.now(),
+        },
+      },
     }));
 
     // Clear selection if deleted slide was selected
-    const selectedSlideId = (state as any).selectedSlideId;
+    const selectedSlideId = (state as any).getSelectedSlideId?.(presentationId);
     if (selectedSlideId === slideId) {
-      (get() as any).selectSlide(newSlideIds[0]);
+      (get() as any).selectSlide(presentationId, newSlideIds[0]);
     }
 
-    (get() as any).takeSnapshot();
+    (get() as any).takeSnapshot(presentationId);
   },
 
   reorderSlides: (slideIds) => {
+    const state = get();
+    const presentationId = state.activePresentationId;
+    if (!presentationId) return;
+
+    const presentation = state.presentations[presentationId];
+    if (!presentation) return;
+
     set((state) => ({
-      presentation: state.presentation
-        ? {
-            ...state.presentation,
-            slideIds,
-            updatedAt: Date.now(),
-          }
-        : null,
+      presentations: {
+        ...state.presentations,
+        [presentationId]: {
+          ...presentation,
+          slideIds,
+          updatedAt: Date.now(),
+        },
+      },
     }));
-    (get() as any).takeSnapshot();
+    (get() as any).takeSnapshot(presentationId);
   },
 
   updateSlideBackground: (slideId, background) => {
+    const state = get();
+    const presentationId = state.activePresentationId;
+    if (!presentationId) return;
+
+    const presentation = state.presentations[presentationId];
+    if (!presentation) return;
+
     set((state) => ({
-      presentation: state.presentation
-        ? {
-            ...state.presentation,
-            slides: {
-              ...state.presentation.slides,
-              [slideId]: {
-                ...state.presentation.slides[slideId],
-                background,
-              },
+      presentations: {
+        ...state.presentations,
+        [presentationId]: {
+          ...presentation,
+          slides: {
+            ...presentation.slides,
+            [slideId]: {
+              ...presentation.slides[slideId],
+              background,
+              thumbnail: undefined, // Clear thumbnail to force regeneration
             },
-            updatedAt: Date.now(),
-          }
-        : null,
+          },
+          updatedAt: Date.now(),
+        },
+      },
     }));
-    (get() as any).takeSnapshot();
+    (get() as any).takeSnapshot(presentationId);
   },
 
   updateSlideDimensions: (slideId, dimensions) => {
+    const state = get();
+    const presentationId = state.activePresentationId;
+    if (!presentationId) return;
+
+    const presentation = state.presentations[presentationId];
+    if (!presentation) return;
+
     set((state) => ({
-      presentation: state.presentation
-        ? {
-            ...state.presentation,
-            slides: {
-              ...state.presentation.slides,
-              [slideId]: {
-                ...state.presentation.slides[slideId],
-                dimensions,
-              },
+      presentations: {
+        ...state.presentations,
+        [presentationId]: {
+          ...presentation,
+          slides: {
+            ...presentation.slides,
+            [slideId]: {
+              ...presentation.slides[slideId],
+              dimensions,
+              thumbnail: undefined, // Clear thumbnail to force regeneration
             },
-            updatedAt: Date.now(),
-          }
-        : null,
+          },
+          updatedAt: Date.now(),
+        },
+      },
     }));
-    (get() as any).takeSnapshot();
+    (get() as any).takeSnapshot(presentationId);
   },
 
   generateSlideThumbnail: (slideId, dataURL) => {
+    const state = get();
+    const presentationId = state.activePresentationId;
+    if (!presentationId) return;
+
+    const presentation = state.presentations[presentationId];
+    if (!presentation) return;
+
     set((state) => ({
-      presentation: state.presentation
-        ? {
-            ...state.presentation,
-            slides: {
-              ...state.presentation.slides,
-              [slideId]: {
-                ...state.presentation.slides[slideId],
-                thumbnail: dataURL,
-              },
+      presentations: {
+        ...state.presentations,
+        [presentationId]: {
+          ...presentation,
+          slides: {
+            ...presentation.slides,
+            [slideId]: {
+              ...presentation.slides[slideId],
+              thumbnail: dataURL,
             },
-          }
-        : null,
+          },
+        },
+      },
     }));
     // Don't take snapshot for thumbnail updates
   },

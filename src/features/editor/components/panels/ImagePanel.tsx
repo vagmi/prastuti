@@ -6,7 +6,10 @@ import { getCurrentPresentationPath } from '../../services/assetService';
 import { Image, Upload } from 'lucide-react';
 
 export default function ImagePanel() {
-  const selectedSlideId = useEditorStore((s) => s.selectedSlideId);
+  const activePresentationId = useEditorStore((s) => s.activePresentationId);
+  const selectedSlideId = useEditorStore((s) =>
+    s.activePresentationId ? s.selectedSlideIds[s.activePresentationId] : null
+  );
   const createElement = useEditorStore((s) => s.createElement);
   const setActivePanel = useEditorStore((s) => s.setActivePanel);
   const [isUploading, setIsUploading] = useState(false);

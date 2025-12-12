@@ -11,9 +11,14 @@ const TEXT_PRESETS = [
 ];
 
 export default function TextPanel() {
-  const selectedSlideId = useEditorStore((s) => s.selectedSlideId);
+  const activePresentationId = useEditorStore((s) => s.activePresentationId);
+  const selectedSlideId = useEditorStore((s) =>
+    s.activePresentationId ? s.selectedSlideIds[s.activePresentationId] : null
+  );
+  const presentation = useEditorStore((s) =>
+    s.activePresentationId ? s.presentations[s.activePresentationId] : null
+  );
   const createElement = useEditorStore((s) => s.createElement);
-  const presentation = useEditorStore((s) => s.presentation);
   const setActivePanel = useEditorStore((s) => s.setActivePanel);
   const [googleFonts, setGoogleFonts] = useState<GoogleFont[]>([]);
   const [isLoadingFonts, setIsLoadingFonts] = useState(true);

@@ -10,9 +10,16 @@ import SlidePropertiesPanel from '../panels/SlidePropertiesPanel';
 
 export default function RightSidebar() {
   const activePanel = useEditorStore((s) => s.activePanel);
-  const selectedElementId = useEditorStore((s) => s.selectedElementId);
-  const selectedSlideId = useEditorStore((s) => s.selectedSlideId);
-  const presentation = useEditorStore((s) => s.presentation);
+  const activePresentationId = useEditorStore((s) => s.activePresentationId);
+  const presentation = useEditorStore((s) =>
+    s.activePresentationId ? s.presentations[s.activePresentationId] : null
+  );
+  const selectedSlideId = useEditorStore((s) =>
+    s.activePresentationId ? s.selectedSlideIds[s.activePresentationId] : null
+  );
+  const selectedElementId = useEditorStore((s) =>
+    s.activePresentationId ? s.selectedElementIds[s.activePresentationId] : null
+  );
 
   const selectedElement =
     selectedSlideId && selectedElementId && presentation

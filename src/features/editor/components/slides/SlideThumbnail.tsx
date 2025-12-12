@@ -2,12 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { Stage, Layer, Rect, Text as KonvaText, Image as KonvaImage, Circle, Ellipse, RegularPolygon, Star } from 'react-konva';
 import useImage from 'use-image';
 import { resolveAssetUrl } from '../../services/assetService';
+import { useEditorStore } from '../../store';
 import { Slide, ElementType } from '../../types';
 
 // Helper to render image in thumbnail
-function ThumbnailImage({ element }: { element: any }) {
+function ThumbnailImage({ element, onLoad }: { element: any; onLoad?: () => void }) {
   const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
+  const [hasNotifiedLoad, setHasNotifiedLoad] = useState(false);
 
+  // Reset notification flag when source changes
+  useEffect(() => {
+    setHasNotifiedLoad(false);
+    setResolvedSrc(null);
+  }, [element.src]);
+
+  // Resolve asset:// URLs
   useEffect(() => {
     const loadSrc = async () => {
       let src = element.src;
@@ -24,7 +33,18 @@ function ThumbnailImage({ element }: { element: any }) {
     loadSrc();
   }, [element.src]);
 
-  const [image] = useImage(resolvedSrc || '', 'anonymous');
+  const [image, status] = useImage(resolvedSrc || '', 'anonymous');
+
+  // Notify parent when image loads
+  useEffect(() => {
+    console.log('[ThumbnailImage] status:', status, 'hasNotifiedLoad:', hasNotifiedLoad, 'src:', element.src);
+    if (status === 'loaded' && !hasNotifiedLoad && onLoad) {
+      console.log('[ThumbnailImage] Calling onLoad for:', element.src);
+      setHasNotifiedLoad(true);
+      onLoad();
+    }
+  }, [status, hasNotifiedLoad, onLoad, element.src]);
+
   if (!image) return null;
 
   return (
@@ -48,26 +68,98 @@ interface SlideThumbnailProps {
 
 export default function SlideThumbnail({ slide, width = 160, height = 96 }: SlideThumbnailProps) {
   const stageRef = useRef<any>(null);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(slide.thumbnail || null);
+  const [stageReady, setStageReady] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState(0);
+  const [totalImages, setTotalImages] = useState(0);
+  const generateSlideThumbnail = useEditorStore((s) => s.generateSlideThumbnail);
 
+  // Count total images in slide
   useEffect(() => {
-    // Generate thumbnail after component mounts and when slide changes
-    const generateThumbnail = async () => {
-      if (stageRef.current) {
-        try {
-          // Small delay to ensure Konva has rendered
-          await new Promise(resolve => setTimeout(resolve, 100));
+    const imageCount = slide.elementIds.filter(id => {
+      const element = slide.elements[id];
+      return element?.type === 'image';
+    }).length;
+    console.log('[SlideThumbnail] Image count for slide:', slide.id, '=', imageCount);
+    setTotalImages(imageCount);
+    setImagesLoaded(0);
+  }, [slide.elementIds, slide.elements, slide.id]);
 
-          const dataUrl = stageRef.current.toDataURL({ pixelRatio: 2 });
+  // Set initial thumbnail if it exists
+  useEffect(() => {
+    if (slide.thumbnail) {
+      setThumbnailUrl(slide.thumbnail);
+    }
+  }, [slide.thumbnail]);
+
+  // Mark stage as ready after mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setStageReady(true);
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Generate thumbnail when stage is ready, all images loaded, and thumbnail doesn't exist
+  useEffect(() => {
+    console.log('[SlideThumbnail] Generation check:', {
+      slideId: slide.id,
+      stageReady,
+      hasThumbnail: !!slide.thumbnail,
+      hasStageRef: !!stageRef.current,
+      imagesLoaded,
+      totalImages,
+    });
+
+    if (!stageReady || slide.thumbnail || !stageRef.current) {
+      return;
+    }
+
+    // Wait for all images to load before generating
+    if (totalImages > 0 && imagesLoaded < totalImages) {
+      console.log('[SlideThumbnail] Waiting for images:', imagesLoaded, '/', totalImages);
+      return;
+    }
+
+    console.log('[SlideThumbnail] Generating thumbnail for slide:', slide.id);
+    let isMounted = true;
+
+    const generateThumbnail = async () => {
+      try {
+        // Small delay to ensure Konva has rendered everything
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        if (!isMounted || !stageRef.current) return;
+
+        const dataUrl = stageRef.current.toDataURL({ pixelRatio: 2 });
+
+        if (isMounted) {
+          console.log('[SlideThumbnail] Thumbnail generated for slide:', slide.id);
           setThumbnailUrl(dataUrl);
-        } catch (error) {
-          console.error('Error generating thumbnail:', error);
+          // Save thumbnail to slide data (will be included in .prst file on save)
+          generateSlideThumbnail(slide.id, dataUrl);
         }
+      } catch (error) {
+        console.error('Error generating thumbnail:', error);
       }
     };
 
     generateThumbnail();
-  }, [slide]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [stageReady, slide.id, slide.thumbnail, imagesLoaded, totalImages, generateSlideThumbnail]);
+
+  const handleImageLoad = () => {
+    console.log('[SlideThumbnail] Image loaded, incrementing count');
+    setImagesLoaded(prev => {
+      const newCount = prev + 1;
+      console.log('[SlideThumbnail] Images loaded:', newCount, '/', totalImages);
+      return newCount;
+    });
+  };
 
   const { width: slideWidth, height: slideHeight } = slide.dimensions;
 
@@ -166,7 +258,7 @@ export default function SlideThumbnail({ slide, width = 160, height = 96 }: Slid
                 case ElementType.Text:
                   return renderTextElement(element);
                 case ElementType.Image:
-                  return <ThumbnailImage key={element.id} element={element} />;
+                  return <ThumbnailImage key={element.id} element={element} onLoad={handleImageLoad} />;
                 case ElementType.Rectangle:
                   return (
                     <Rect

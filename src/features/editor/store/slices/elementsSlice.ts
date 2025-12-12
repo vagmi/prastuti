@@ -24,10 +24,12 @@ export const createElementsSlice: StateCreator<
   createElement: (slideId, type, props: any = {}) => {
     const elementId = uuid();
     const state = get() as any;
+    const presentationId = state.activePresentationId;
 
-    if (!state.presentation?.slides[slideId]) return elementId;
+    if (!presentationId || !state.presentations?.[presentationId]?.slides[slideId]) return elementId;
 
-    const slide = state.presentation.slides[slideId];
+    const presentation = state.presentations[presentationId];
+    const slide = presentation.slides[slideId];
 
     // Create default element based on type
     const baseElement = {
@@ -145,98 +147,119 @@ export const createElementsSlice: StateCreator<
 
     set((state: any) => {
       return {
-        presentation: state.presentation
-          ? {
-              ...state.presentation,
-              slides: {
-                ...state.presentation.slides,
-                [slideId]: {
-                  ...state.presentation.slides[slideId],
-                  elementIds: [...slide.elementIds, elementId],
-                  elements: {
-                    ...slide.elements,
-                    [elementId]: element,
-                  },
+        presentations: {
+          ...state.presentations,
+          [presentationId]: {
+            ...presentation,
+            slides: {
+              ...presentation.slides,
+              [slideId]: {
+                ...slide,
+                elementIds: [...slide.elementIds, elementId],
+                elements: {
+                  ...slide.elements,
+                  [elementId]: element,
                 },
+                thumbnail: undefined, // Clear thumbnail to force regeneration
               },
-              updatedAt: Date.now(),
-            }
-          : null,
+            },
+            updatedAt: Date.now(),
+          },
+        },
       } as Partial<ElementsSlice>;
     });
 
     // Auto-select new element
-    (get() as any).selectElement(elementId);
-    (get() as any).takeSnapshot();
+    (get() as any).selectElement(presentationId, elementId);
+    (get() as any).takeSnapshot(presentationId);
 
     return elementId;
   },
 
   updateElement: (slideId, elementId, props) => {
+    const state = get() as any;
+    const presentationId = state.activePresentationId;
+
+    if (!presentationId || !state.presentations?.[presentationId]) return;
+
     set((state: any) => {
+      const presentation = state.presentations[presentationId];
       return {
-        presentation: state.presentation
-          ? {
-              ...state.presentation,
-              slides: {
-                ...state.presentation.slides,
-                [slideId]: {
-                  ...state.presentation.slides[slideId],
-                  elements: {
-                    ...state.presentation.slides[slideId].elements,
-                    [elementId]: {
-                      ...state.presentation.slides[slideId].elements[elementId],
-                      ...props,
-                    },
+        presentations: {
+          ...state.presentations,
+          [presentationId]: {
+            ...presentation,
+            slides: {
+              ...presentation.slides,
+              [slideId]: {
+                ...presentation.slides[slideId],
+                elements: {
+                  ...presentation.slides[slideId].elements,
+                  [elementId]: {
+                    ...presentation.slides[slideId].elements[elementId],
+                    ...props,
                   },
                 },
+                thumbnail: undefined, // Clear thumbnail to force regeneration
               },
-              updatedAt: Date.now(),
-            }
-          : null,
+            },
+            updatedAt: Date.now(),
+          },
+        },
       } as Partial<ElementsSlice>;
     });
+
     // Note: Don't take snapshot here - will be called on drag/transform end
   },
 
   deleteElement: (slideId, elementId) => {
     const state = get() as any;
-    if (!state.presentation?.slides[slideId]) return;
+    const presentationId = state.activePresentationId;
 
-    const slide = state.presentation.slides[slideId];
+    if (!presentationId || !state.presentations?.[presentationId]?.slides[slideId]) return;
+
+    const presentation = state.presentations[presentationId];
+    const slide = presentation.slides[slideId];
     const { [elementId]: deleted, ...remainingElements } = slide.elements;
     const newElementIds = slide.elementIds.filter((id: string) => id !== elementId);
 
     set((state: any) => {
       return {
-        presentation: state.presentation
-          ? {
-              ...state.presentation,
-              slides: {
-                ...state.presentation.slides,
-                [slideId]: {
-                  ...slide,
-                  elementIds: newElementIds,
-                  elements: remainingElements,
-                },
+        presentations: {
+          ...state.presentations,
+          [presentationId]: {
+            ...presentation,
+            slides: {
+              ...presentation.slides,
+              [slideId]: {
+                ...slide,
+                elementIds: newElementIds,
+                elements: remainingElements,
+                thumbnail: undefined, // Clear thumbnail to force regeneration
               },
-              updatedAt: Date.now(),
-            }
-          : null,
+            },
+            updatedAt: Date.now(),
+          },
+        },
       } as Partial<ElementsSlice>;
     });
 
     // Clear selection if deleted
-    if (state.selectedElementId === elementId) {
-      (get() as any).selectElement(null);
+    const selectedElementId = state.getSelectedElementId(presentationId);
+    if (selectedElementId === elementId) {
+      (get() as any).selectElement(presentationId, null);
     }
 
-    (get() as any).takeSnapshot();
+    (get() as any).takeSnapshot(presentationId);
   },
 
   duplicateElement: (slideId, elementId) => {
     const state = get() as any;
-    const element = state.presentation?.slides[slideId]?.elements[elementId];
+    const presentationId = state.activePresentationId;
+
+    if (!presentationId) return;
+
+    const element = state.presentations?.[presentationId]?.slides[slideId]?.elements[elementId];
 
     if (!element) return;
 
@@ -249,29 +272,40 @@ export const createElementsSlice: StateCreator<
   },
 
   reorderElements: (slideId, elementIds) => {
+    const state = get() as any;
+    const presentationId = state.activePresentationId;
+
+    if (!presentationId || !state.presentations?.[presentationId]) return;
+
     set((state: any) => {
+      const presentation = state.presentations[presentationId];
       return {
-        presentation: state.presentation
-          ? {
-              ...state.presentation,
-              slides: {
-                ...state.presentation.slides,
-                [slideId]: {
-                  ...state.presentation.slides[slideId],
-                  elementIds,
-                },
+        presentations: {
+          ...state.presentations,
+          [presentationId]: {
+            ...presentation,
+            slides: {
+              ...presentation.slides,
+              [slideId]: {
+                ...presentation.slides[slideId],
+                elementIds,
               },
-              updatedAt: Date.now(),
-            }
-          : null,
+            },
+            updatedAt: Date.now(),
+          },
+        },
       } as Partial<ElementsSlice>;
     });
-    (get() as any).takeSnapshot();
+    (get() as any).takeSnapshot(presentationId);
   },
 
   bringToFront: (slideId, elementId) => {
     const state = get() as any;
-    const slide = state.presentation?.slides[slideId];
+    const presentationId = state.activePresentationId;
+
+    if (!presentationId) return;
+
+    const slide = state.presentations?.[presentationId]?.slides[slideId];
     if (!slide) return;
 
     const newElementIds = slide.elementIds.filter((id: string) => id !== elementId);
@@ -282,7 +316,11 @@ export const createElementsSlice: StateCreator<
 
   sendToBack: (slideId, elementId) => {
     const state = get() as any;
-    const slide = state.presentation?.slides[slideId];
+    const presentationId = state.activePresentationId;
+
+    if (!presentationId) return;
+
+    const slide = state.presentations?.[presentationId]?.slides[slideId];
     if (!slide) return;
 
     const newElementIds = slide.elementIds.filter((id: string) => id !== elementId);
@@ -293,7 +331,11 @@ export const createElementsSlice: StateCreator<
 
   bringForward: (slideId, elementId) => {
     const state = get() as any;
-    const slide = state.presentation?.slides[slideId];
+    const presentationId = state.activePresentationId;
+
+    if (!presentationId) return;
+
+    const slide = state.presentations?.[presentationId]?.slides[slideId];
     if (!slide) return;
 
     const currentIndex = slide.elementIds.indexOf(elementId);
@@ -310,7 +352,11 @@ export const createElementsSlice: StateCreator<
 
   sendBackward: (slideId, elementId) => {
     const state = get() as any;
-    const slide = state.presentation?.slides[slideId];
+    const presentationId = state.activePresentationId;
+
+    if (!presentationId) return;
+
+    const slide = state.presentations?.[presentationId]?.slides[slideId];
     if (!slide) return;
 
     const currentIndex = slide.elementIds.indexOf(elementId);

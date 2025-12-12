@@ -31,7 +31,10 @@ const SHAPE_PRESETS = [
 ];
 
 export default function ShapePanel() {
-  const selectedSlideId = useEditorStore((s) => s.selectedSlideId);
+  const activePresentationId = useEditorStore((s) => s.activePresentationId);
+  const selectedSlideId = useEditorStore((s) =>
+    s.activePresentationId ? s.selectedSlideIds[s.activePresentationId] : null
+  );
   const createElement = useEditorStore((s) => s.createElement);
   const setActivePanel = useEditorStore((s) => s.setActivePanel);
 

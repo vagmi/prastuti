@@ -1,13 +1,14 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useEditorStore } from '../../store';
 import LeftSidebar from './LeftSidebar';
 import RightSidebar from './RightSidebar';
 import SlideNavigator from '../slides/SlideNavigator';
 import SlideCanvas from '../canvas/SlideCanvas';
 import SlideShow from '../slideshow/SlideShow';
+import TabBar from '../tabs/TabBar';
 import {
   savePresentation,
-  loadPresentation,
+  loadPresentation as loadPresentationFile,
   createTempPresentation,
   moveTempPresentation,
 } from '../../services/presentationService';
@@ -17,11 +18,15 @@ import { ask } from '@tauri-apps/plugin-dialog';
 
 export default function EditorLayout() {
   const createPresentation = useEditorStore((s) => s.createPresentation);
-  const loadPresentationIntoStore = useEditorStore((s) => s.loadPresentation);
-  const clearPresentation = useEditorStore((s) => s.clearPresentation);
+  const loadPresentation = useEditorStore((s) => s.loadPresentation);
   const updatePresentationName = useEditorStore((s) => s.updatePresentationName);
-  const presentation = useEditorStore((s) => s.presentation);
-  const filePath = useEditorStore((s) => s.filePath);
+  const closePresentation = useEditorStore((s) => s.closePresentation);
+  const activePresentationId = useEditorStore((s) => s.activePresentationId);
+  const presentation = useEditorStore((s) =>
+    s.activePresentationId ? s.presentations[s.activePresentationId] : null
+  );
+  const presentationIds = useEditorStore((s) => s.presentationIds);
+  const filePaths = useEditorStore((s) => s.filePaths);
   const isTemp = useEditorStore((s) => s.isTemp);
   const isDirty = useEditorStore((s) => s.isDirty);
   const setFilePath = useEditorStore((s) => s.setFilePath);
@@ -31,67 +36,73 @@ export default function EditorLayout() {
   const [isSaving, setIsSaving] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
   const [isPresenting, setIsPresenting] = useState(false);
-  const [lastSavedTime, setLastSavedTime] = useState<number | null>(null);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [titleValue, setTitleValue] = useState('');
+  const [lastSavedTime, setLastSavedTime] = useState<Record<string, number>>({});
+  const initializedRef = useRef(false);
+  const filePath = activePresentationId ? filePaths[activePresentationId] : null;
+  const isTempFile = activePresentationId ? isTemp[activePresentationId] : false;
 
-  // Initialize with default presentation and create temp file
+  // Initialize with default presentation
   useEffect(() => {
-    const initPresentation = async () => {
-      if (!presentation) {
-        createPresentation('Untitled Presentation', {
-          width: 1920,
-          height: 1080,
-        });
-      } else if (!filePath) {
-        // Create a temp file for the new presentation
-        try {
-          const tempPath = await createTempPresentation(presentation);
-          setFilePath(tempPath, true);
-          setCurrentPresentationPath(tempPath);
-          markAsSaved(); // Mark as saved initially
-          console.log('Created temp presentation at:', tempPath);
-        } catch (error) {
-          console.error('Failed to create temp presentation:', error);
+    if (presentationIds.length === 0 && !initializedRef.current) {
+      initializedRef.current = true;
+      const presentationId = createPresentation('Untitled Presentation', {
+        width: 1920,
+        height: 1080,
+      });
+
+      // Create temp file
+      const initTempFile = async () => {
+        const state = useEditorStore.getState();
+        const pres = state.presentations[presentationId];
+        if (pres && presentationId) {
+          try {
+            const tempPath = await createTempPresentation(pres);
+            setFilePath(presentationId, tempPath, true);
+            setCurrentPresentationPath(tempPath);
+            markAsSaved(presentationId);
+            console.log('Created temp presentation at:', tempPath);
+          } catch (error) {
+            console.error('Failed to create temp presentation:', error);
+          }
         }
-      }
-    };
+      };
 
-    initPresentation();
-  }, [presentation, createPresentation, filePath, setFilePath, markAsSaved]);
+      initTempFile();
+    }
+  }, [presentationIds.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Ensure presentation path is set when component mounts with existing path
+  // Ensure presentation path is set
   useEffect(() => {
     if (filePath) {
       setCurrentPresentationPath(filePath);
     }
   }, [filePath]);
 
-  // Autosave every 5 seconds
+  // Autosave for active presentation
   useEffect(() => {
-    if (!presentation || !filePath) return;
+    if (!presentation || !activePresentationId || !filePath) return;
 
     const autoSaveInterval = setInterval(async () => {
-      // Only save if dirty
-      if (isDirty()) {
+      if (isDirty(activePresentationId)) {
         try {
           await savePresentation(presentation, { filePath });
-          markAsSaved();
-          setLastSavedTime(Date.now());
+          markAsSaved(activePresentationId);
+          setLastSavedTime(prev => ({ ...prev, [activePresentationId]: Date.now() }));
           console.log('Auto-saved at', new Date().toLocaleTimeString());
         } catch (error) {
           console.error('Auto-save failed:', error);
         }
       }
-    }, 5000); // 5 seconds
+    }, 5000);
 
     return () => clearInterval(autoSaveInterval);
-  }, [presentation, filePath, isDirty, markAsSaved]);
+  }, [presentation, activePresentationId, filePath, isDirty, markAsSaved]);
 
-  // Prompt before unload if dirty
+  // Prompt before unload if any presentation is dirty
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty()) {
+      const anyDirty = presentationIds.some(id => isDirty(id));
+      if (anyDirty) {
         e.preventDefault();
         e.returnValue = '';
       }
@@ -99,10 +110,10 @@ export default function EditorLayout() {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isDirty]);
+  }, [presentationIds, isDirty]);
 
-  const promptSaveIfDirty = async (): Promise<boolean> => {
-    if (!isDirty()) return true;
+  const promptSaveIfDirty = async (presentationId: string): Promise<boolean> => {
+    if (!isDirty(presentationId)) return true;
 
     const result = await ask('You have unsaved changes. Do you want to save them?', {
       title: 'Unsaved Changes',
@@ -112,48 +123,65 @@ export default function EditorLayout() {
     });
 
     if (result) {
-      await handleSave();
+      await handleSavePresentation(presentationId);
     }
-    return true; // Continue with the action
+    return true;
   };
 
   const handleNew = async () => {
-    // Prompt to save if dirty
-    const canContinue = await promptSaveIfDirty();
-    if (!canContinue) return;
+    // Prompt to save active presentation if dirty
+    if (activePresentationId && isDirty(activePresentationId)) {
+      await promptSaveIfDirty(activePresentationId);
+    }
 
-    // Clear current presentation and create new one
-    clearPresentation();
-    createPresentation('Untitled Presentation', {
+    // Create new presentation (will be added as new tab)
+    const presentationId = createPresentation('Untitled Presentation', {
       width: 1920,
       height: 1080,
     });
+
+    // Create temp file for new presentation
+    const state = useEditorStore.getState();
+    const pres = state.presentations[presentationId];
+    if (pres && presentationId) {
+      try {
+        const tempPath = await createTempPresentation(pres);
+        setFilePath(presentationId, tempPath, true);
+        setCurrentPresentationPath(tempPath);
+        markAsSaved(presentationId);
+      } catch (error) {
+        console.error('Failed to create temp presentation:', error);
+      }
+    }
   };
 
-  const handleSave = async () => {
-    if (!presentation) return;
+  const handleSavePresentation = async (presentationId: string) => {
+    const pres = useEditorStore.getState().presentations[presentationId];
+    if (!pres) return;
+
+    const presentationFilePath = filePaths[presentationId];
+    const isTempPresentation = isTemp[presentationId];
 
     setIsSaving(true);
     try {
-      if (isTemp) {
-        // First time save - show dialog and move temp to permanent location
-        const newFilePath = await savePresentation(presentation);
-        if (newFilePath && filePath) {
-          // Move the temp file to the new location
-          await moveTempPresentation(filePath, newFilePath);
-          setFilePath(newFilePath, false);
+      if (isTempPresentation) {
+        // First time save - show dialog
+        const newFilePath = await savePresentation(pres);
+        if (newFilePath && presentationFilePath) {
+          await moveTempPresentation(presentationFilePath, newFilePath);
+          setFilePath(presentationId, newFilePath, false);
           setCurrentPresentationPath(newFilePath);
-          markAsSaved();
-          setLastSavedTime(Date.now());
+          markAsSaved(presentationId);
+          setLastSavedTime(prev => ({ ...prev, [presentationId]: Date.now() }));
           console.log('Presentation saved to:', newFilePath);
         }
       } else {
-        // Subsequent saves - just update the existing file
-        if (filePath) {
-          await savePresentation(presentation, { filePath });
-          markAsSaved();
-          setLastSavedTime(Date.now());
-          console.log('Presentation updated at:', filePath);
+        // Update existing file
+        if (presentationFilePath) {
+          await savePresentation(pres, { filePath: presentationFilePath });
+          markAsSaved(presentationId);
+          setLastSavedTime(prev => ({ ...prev, [presentationId]: Date.now() }));
+          console.log('Presentation updated at:', presentationFilePath);
         }
       }
     } catch (error) {
@@ -164,24 +192,26 @@ export default function EditorLayout() {
     }
   };
 
+  const handleSave = async () => {
+    if (activePresentationId) {
+      await handleSavePresentation(activePresentationId);
+    }
+  };
+
   const handleOpen = async () => {
-    // Prompt to save if dirty
-    const canContinue = await promptSaveIfDirty();
-    if (!canContinue) return;
+    // Prompt to save active if dirty
+    if (activePresentationId && isDirty(activePresentationId)) {
+      await promptSaveIfDirty(activePresentationId);
+    }
 
     setIsOpening(true);
     try {
-      const result = await loadPresentation();
+      const result = await loadPresentationFile();
       if (result) {
-        // Clear current presentation first
-        clearPresentation();
-
-        // Set the presentation path and load data
-        setFilePath(result.filePath, false);
+        // Load as new tab
+        const presentationId = loadPresentation(result.presentation, result.filePath);
         setCurrentPresentationPath(result.filePath);
-        loadPresentationIntoStore(result.presentation);
-        markAsSaved();
-        setLastSavedTime(Date.now());
+        setLastSavedTime(prev => ({ ...prev, [presentationId]: Date.now() }));
         console.log('Presentation loaded successfully from:', result.filePath);
       }
     } catch (error) {
@@ -190,6 +220,49 @@ export default function EditorLayout() {
     } finally {
       setIsOpening(false);
     }
+  };
+
+  const handleCloseTab = async () => {
+    if (!activePresentationId) return;
+
+    // If this is the last tab, create a new one before closing
+    if (presentationIds.length === 1) {
+      // Check if dirty and prompt to save
+      if (isDirty(activePresentationId)) {
+        const result = await ask('You have unsaved changes. Do you want to save them before closing?', {
+          title: 'Unsaved Changes',
+          kind: 'warning',
+          okLabel: 'Save',
+          cancelLabel: 'Discard',
+        });
+
+        if (result) {
+          await handleSavePresentation(activePresentationId);
+        }
+      }
+
+      // Create new presentation before closing the last one
+      await handleNew();
+      // Close the old one
+      closePresentation(activePresentationId);
+      return;
+    }
+
+    // Check if dirty and prompt to save
+    if (isDirty(activePresentationId)) {
+      const result = await ask('You have unsaved changes. Do you want to save them before closing?', {
+        title: 'Unsaved Changes',
+        kind: 'warning',
+        okLabel: 'Save',
+        cancelLabel: 'Discard',
+      });
+
+      if (result) {
+        await handleSavePresentation(activePresentationId);
+      }
+    }
+
+    closePresentation(activePresentationId);
   };
 
   // Keyboard shortcuts
@@ -207,54 +280,15 @@ export default function EditorLayout() {
       } else if (modifier && e.key === 's') {
         e.preventDefault();
         handleSave();
+      } else if (modifier && e.key === 'w') {
+        e.preventDefault();
+        handleCloseTab();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDirty, presentation, filePath, isTemp]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleTitleClick = () => {
-    if (presentation) {
-      setTitleValue(presentation.name);
-      setIsEditingTitle(true);
-    }
-  };
-
-  const handleTitleBlur = () => {
-    if (titleValue.trim() && titleValue !== presentation?.name) {
-      updatePresentationName(titleValue.trim());
-    }
-    setIsEditingTitle(false);
-  };
-
-  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleTitleBlur();
-    } else if (e.key === 'Escape') {
-      setIsEditingTitle(false);
-    }
-  };
-
-  // Get display name for title
-  const getDisplayName = () => {
-    if (!presentation) return 'Loading...';
-
-    let name = presentation.name;
-
-    // Add file path if not temp
-    if (filePath && !isTemp) {
-      const fileName = filePath.split(/[\\/]/).pop() || name;
-      name = fileName.replace(/\.prastuti$/, '');
-    }
-
-    // Add asterisk if dirty
-    if (isDirty()) {
-      name = `${name} *`;
-    }
-
-    return name;
-  };
+  }, [activePresentationId, isDirty]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!presentation) {
     return (
@@ -264,38 +298,25 @@ export default function EditorLayout() {
     );
   }
 
+  const dirty = activePresentationId ? isDirty(activePresentationId) : false;
+  const savedTime = activePresentationId ? lastSavedTime[activePresentationId] : null;
+
   return (
     <>
       <div className="flex h-screen flex-col bg-gray-100">
         {/* Top Toolbar */}
         <div className="border-b border-gray-200 bg-white px-6 py-3 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-4">
-            {isEditingTitle ? (
-              <input
-                type="text"
-                value={titleValue}
-                onChange={(e) => setTitleValue(e.target.value)}
-                onBlur={handleTitleBlur}
-                onKeyDown={handleTitleKeyDown}
-                autoFocus
-                className="text-lg font-semibold px-3 py-1.5 border border-purple-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
-              />
-            ) : (
-              <h1
-                className="text-lg font-semibold px-3 py-1.5 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
-                onClick={handleTitleClick}
-                title="Click to edit title"
-              >
-                {getDisplayName()}
-              </h1>
-            )}
-            {lastSavedTime && filePath && !isDirty() && (
+            <h1 className="text-lg font-semibold">
+              {presentation.name}
+            </h1>
+            {savedTime && filePath && !dirty && (
               <span className="text-xs text-gray-400 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                Saved at {new Date(lastSavedTime).toLocaleTimeString()}
+                Saved at {new Date(savedTime).toLocaleTimeString()}
               </span>
             )}
-            {isDirty() && (
+            {dirty && (
               <span className="text-xs text-amber-600 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
                 Unsaved changes
@@ -350,6 +371,12 @@ export default function EditorLayout() {
             </button>
           </div>
         </div>
+
+        {/* Tab Bar */}
+        <TabBar
+          onNewTab={handleNew}
+          onSaveTab={handleSavePresentation}
+        />
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">

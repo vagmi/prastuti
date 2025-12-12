@@ -49,7 +49,10 @@ interface SlideShowProps {
 }
 
 export default function SlideShow({ onClose }: SlideShowProps) {
-  const presentation = useEditorStore((s) => s.presentation);
+  const activePresentationId = useEditorStore((s) => s.activePresentationId);
+  const presentation = useEditorStore((s) =>
+    s.activePresentationId ? s.presentations[s.activePresentationId] : null
+  );
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
